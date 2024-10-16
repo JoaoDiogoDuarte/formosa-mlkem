@@ -95,42 +95,42 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair(reg u64 public_key secret_ke
   ?{}, r = #set0();
   return r;
 }
-//
-//export fn jade_kem_mlkem_mlkem768_amd64_ref_enc(reg u64 ciphertext shared_secret public_key) -> reg u64
-//{
-//
-//  reg u64 r t;
-//  inline int i;
-//
-//  stack u8[MLKEM_SYMBYTES] randomness;
-//  stack u8[MLKEM_CT_LEN] ct;
-//  stack u8[MLKEM_SYMBYTES] shk;
-//  stack u8[MLKEM_PUBLICKEYBYTES] pk;
-//
-//  reg ptr u8[MLKEM_SYMBYTES] randomnessp;
-//  reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
-//
-//  _ = #init_msf();
-//
-//  for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
-//
-//  () = #spill(ciphertext, shared_secret, public_key);
-//
-//  randomnessp = randomness;
-//  randomnessp = #randombytes(randomnessp);
-//  pkp = pk;
-//
-//  ct, shk = __crypto_kem_enc_jazz(ct, shk, pkp, randomnessp);
-//
-//  () = #spill(pkp, randomnessp);
-//  () = #unspill(ciphertext, shared_secret);
-//
-//  for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
-//  for i=0 to MLKEM_CT_LEN/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
-//
-//  ?{}, r = #set0();
-//  return r;
-//}
+
+export fn jade_kem_mlkem_mlkem768_amd64_ref_enc(reg u64 ciphertext shared_secret public_key) -> reg u64
+{
+
+  reg u64 r t;
+  inline int i;
+
+  stack u8[MLKEM_SYMBYTES] randomness;
+  stack u8[MLKEM_CT_LEN] ct;
+  stack u8[MLKEM_SYMBYTES] shk;
+  stack u8[MLKEM_PUBLICKEYBYTES] pk;
+
+  reg ptr u8[MLKEM_SYMBYTES] randomnessp;
+  reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
+
+  _ = #init_msf();
+
+  for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
+
+  () = #spill(ciphertext, shared_secret, public_key);
+
+  randomnessp = randomness;
+  randomnessp = #randombytes(randomnessp);
+  pkp = pk;
+
+  ct, shk = __crypto_kem_enc_jazz(ct, shk, pkp, randomnessp);
+
+  () = #spill(pkp, randomnessp);
+  () = #unspill(ciphertext, shared_secret);
+
+  for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
+  for i=0 to MLKEM_CT_LEN/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
+
+  ?{}, r = #set0();
+  return r;
+}
 
 
 //export fn jade_kem_mlkem_mlkem768_amd64_ref_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
