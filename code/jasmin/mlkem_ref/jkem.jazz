@@ -20,6 +20,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(reg u64 public_key se
   randomnessp = randomness;
   pk, sk = __crypto_kem_keypair_jazz(pk, sk, randomnessp);
 
+ () = #spill(randomnessp);
  () = #unspill(public_key, secret_key);
 
   for i=0 to MLKEM_PUBLICKEYBYTES/8 { t = pk[u64 i]; [public_key + 8*i] = t; }
@@ -29,26 +30,38 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(reg u64 public_key se
   return r;
 }
 
-//export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared_secret public_key fixedrand) -> reg u64
-//{
-//  reg u64 r;
-//  stack u8[MLKEM_SYMBYTES] randomness;
-//  reg ptr u8[MLKEM_SYMBYTES] randomnessp;
-//  inline int i;
-//
-//  ciphertext = ciphertext;
-//  shared_secret = shared_secret;
-//  public_key = public_key;
-//
-//  for i = 0 to MLKEM_SYMBYTES {
-//    randomness[i] = (u8)[fixedrand + i];
-//  }
-//
-//  randomnessp = randomness;
-//  __crypto_kem_enc_jazz(ciphertext, shared_secret, public_key, randomnessp);
-//  ?{}, r = #set0();
-//  return r;
-//}
+export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared_secret public_key fixedrand) -> reg u64
+{
+  reg u64 r;
+  stack u8[MLKEM_SYMBYTES] randomness;
+  stack u8[MLKEM_CT_LEN] ct;
+  stack u8[MLKEM_SYMBYTES] shk;
+  stack u8[MLKEM_PUBLICKEYBYTES] pk;
+
+  reg ptr u8[MLKEM_SYMBYTES] randomnessp;
+  reg ptr u8[MLKEM_SYMBYTES] pkp;
+
+  _ = #init_msf();
+
+  for i = 0 to MLKEM_SYMBYTES { randomness[i] = (u8)[fixedrand + i]; }
+  for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
+
+  () = #spill(ciphertext, shared_key, public_key, fixedrand);
+
+  randomnessp = randomness;
+  pkp = pk;
+
+  ct, shk = __crypto_kem_enc_jazz(ct, shk, pkp, randomnessp);
+
+  () = #spill(pkp, randomnessp);
+  () = #unspill(ciphertext, shared_key);
+
+  for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_key + 8*i] = t; }
+  for i=0 to MLKEM_CT_LEN/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
+
+  ?{}, r = #set0();
+  return r;
+}
 //
 //
 //export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair(reg u64 public_key secret_key) -> reg u64
