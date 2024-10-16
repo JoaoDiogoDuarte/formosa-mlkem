@@ -48,7 +48,7 @@ fn __rej_uniform(stack u16[MLKEM_N] rp, reg u64 offset, stack u8[SHAKE128_RATE] 
 }
 
 inline
-fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed, reg u64 transposed) -> stack u16[MLKEM_K*MLKEM_VECN]
+fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
 {
   stack u8[34] extseed;
   stack u8[SHAKE128_RATE] buf;
@@ -60,10 +60,7 @@ fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed, reg u64 transposed) -> stack u16[
   reg u16 t;
   reg u64 ctr k;
   stack u64 sctr;
-  stack u64 stransposed;
   inline int j i;
-
-  stransposed = transposed;
 
   for j = 0 to MLKEM_SYMBYTES
   {
@@ -75,17 +72,63 @@ fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed, reg u64 transposed) -> stack u16[
   {
     for j = 0 to MLKEM_K
     {
-      transposed = stransposed;
-      if(transposed == 0)
+      extseed[MLKEM_SYMBYTES] = j;
+      extseed[MLKEM_SYMBYTES+1] = i;
+
+      state = _shake128_absorb34(state, extseed);
+
+      ctr = 0;
+      while (ctr < MLKEM_N)
       {
-        extseed[MLKEM_SYMBYTES] = j;
-        extseed[MLKEM_SYMBYTES+1] = i;
+        sctr = ctr;
+        state, buf = _shake128_squeezeblock(state, buf);
+        ctr = sctr;
+        ctr, poly  = __rej_uniform(poly, ctr, buf);
       }
-      else
+
+      k = 0;
+      reg ptr u16[MLKEM_N] rij;
+      rij = r[i * MLKEM_VECN + j * MLKEM_N : MLKEM_N];
+      while (k < MLKEM_N)
       {
-        extseed[MLKEM_SYMBYTES] = i;
-        extseed[MLKEM_SYMBYTES+1] = j;
+        t = poly[(int) k];
+        rij[k] = t;
+        k += 1;
       }
+      r[i * MLKEM_VECN + j * MLKEM_N : MLKEM_N] = rij;
+    }
+  }
+  return r;
+}
+
+
+inline
+fn __gen_matrix_transpose(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
+{
+  stack u8[34] extseed;
+  stack u8[SHAKE128_RATE] buf;
+  stack u64[25] state;
+  stack u16[MLKEM_N] poly;
+  stack u16[MLKEM_K*MLKEM_VECN] r;
+
+  reg u8 c;
+  reg u16 t;
+  reg u64 ctr k;
+  stack u64 sctr;
+  inline int j i;
+
+  for j = 0 to MLKEM_SYMBYTES
+  {
+    c = seed[j];
+    extseed[j] = c;
+  }
+
+  for i=0 to MLKEM_K
+  {
+    for j = 0 to MLKEM_K
+    {
+      extseed[MLKEM_SYMBYTES] = i;
+      extseed[MLKEM_SYMBYTES+1] = j;
 
       state = _shake128_absorb34(state, extseed);
 

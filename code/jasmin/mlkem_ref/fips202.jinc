@@ -482,10 +482,10 @@ fn _shake256_128_33(reg ptr u8[128] out, reg const ptr u8[33] in) -> stack u8[12
   }
   state[u8 33] ^= 0x1f;
   state[u8 SHAKE256_RATE-1] ^= 0x80;
-    
+
   state = _keccakf1600_(state);
 
-  out = sout; 
+  out = sout;
 
   for i = 0 to 128 {
     c = state[u8 (int) i];
@@ -515,7 +515,7 @@ fn _shake256_1120_32(reg u64 out, reg u64 in0 in1) {
     t64 = (u64)[in1 + (i-MLKEM_SYMBYTES/8)*8];
     state[u64 i] ^= t64;
   }
-      
+
   state = _keccakf1600_(state);
 
   r8 = SHAKE256_RATE;
@@ -571,7 +571,7 @@ fn _sha3512_32(reg ptr u8[64] out, reg const ptr u8[32] in) -> stack u8[64]
   }
   state[u8 32] ^= 0x06;
   state[u8 SHA3_512_RATE-1] ^= 0x80;
-    
+
   state = _keccakf1600_(state);
 
   out = s_out;
@@ -668,6 +668,65 @@ fn _isha3_256(reg ptr u8[32] out, reg u64 in inlen) -> reg ptr u8[32]
   return out;
 }
 
+
+#[returnaddress="stack"] // can be sped up with way less copying but I am a little confused with the scaling of arrays
+fn _sha3_256_pk(reg ptr u8[32] out, reg ptr u8[MLKEM_PUBLICKEYBYTES] in) -> reg ptr u8[32]
+{
+  stack u64[25] state;
+  reg u8 t;
+  reg u64 t64;
+  inline int i j pos;
+
+  () = #spill(out);
+
+  pos = 0;
+  state = __st0(state);
+
+  for i = 0 to 8 // floor(1184/136) = 8
+  {
+    for j = 0 to SHA3_256_RATE
+     {
+        t = in[pos + i];
+        state[u8 i] ^= t;
+        j = j + 1;
+     }
+
+     pos += SHA3_256_RATE;
+
+     () = #spill(in);
+
+    state = _keccakf1600_(state);
+
+    () = #unspill(in);
+  }
+
+  for i = 0 to 96
+  {
+    t = in[pos + i];
+    state[u8 i] ^= t;
+    i = i + 1;
+  }
+  () = #spill(in);
+
+  state[u8 96] ^= 0x06;
+
+  i = SHA3_256_RATE-1;
+  state[u8 i] ^= 0x80;
+
+  state = _keccakf1600_(state);
+
+  () = #unspill(out);
+  for i=0 to 4
+  {
+    t64 = state[i];
+    out[u64 i] = t64;
+  }
+
+  return out;
+}
+
+
+
 #[returnaddress="stack"]
 fn _isha3_256_32(reg ptr u8[32] out, reg ptr u8[MLKEM_SYMBYTES] in) -> reg ptr u8[32]
 {
@@ -735,4 +794,3 @@ fn _sha3_512_64(reg ptr u8[64] out, reg const ptr u8[64] in) -> stack u8[64]
 
   return out;
 }
-
