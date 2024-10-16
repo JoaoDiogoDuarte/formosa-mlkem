@@ -204,19 +204,21 @@ fn __polyvec_decompress(reg u64 ap) -> stack u16[MLKEM_VECN]
 }
 
 inline
-fn __polyvec_frombytes(reg u64 ap) -> stack u16[MLKEM_VECN]
+fn __polyvec_frombytes(reg ptr u8[MLKEM_PUBLICKEYBYTES] ap) -> stack u16[MLKEM_VECN]
 {
+  reg ptr u8[MLKEM_PUBLICKEYBYTES] a;
   stack u16[MLKEM_VECN] r;
-  reg u64 pp;
 
-  pp = ap;
-  r[0:MLKEM_N] = _poly_frombytes(r[0:MLKEM_N], pp);
-  pp += MLKEM_POLYBYTES;
-  r[MLKEM_N:MLKEM_N] = _poly_frombytes(r[MLKEM_N:MLKEM_N], pp);
-  pp += MLKEM_POLYBYTES;
-  r[2*MLKEM_N:MLKEM_N] = _poly_frombytes(r[2*MLKEM_N:MLKEM_N], pp);
+  a = ap;
+
+  r[0:MLKEM_N], a[0:MLKEM_POLYBYTES] = _poly_frombytes_regptr(r[0:MLKEM_N], a[0:3*MLKEM_N/2]);
+
+  r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES] = _poly_frombytes_regptr(r[MLKEM_N:MLKEM_N], a[3*MLKEM_N/2:3*MLKEM_N/2]);
+
+  r[2*MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES*2:MLKEM_POLYBYTES] = _poly_frombytes_regptr(r[2*MLKEM_N:MLKEM_N], a[6*MLKEM_N/2:3*MLKEM_N/2]);
 
   return r;
+
 }
 
 inline
