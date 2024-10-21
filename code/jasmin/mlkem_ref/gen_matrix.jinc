@@ -8,14 +8,28 @@ fn __rej_uniform(stack u16[MLKEM_N] rp, reg u64 offset, stack u8[SHAKE128_RATE] 
   reg u16 t;
   reg u64 pos ctr;
 
+  #msf reg u64 ms;
+  reg bool cond;
+
+  ms = #init_msf();
 
   ctr = offset;
   pos = 0;
 
-  while (pos < SHAKE128_RATE - 2) {
-    if ctr < MLKEM_N {
+  while { cond = (pos < SHAKE128_RATE - 2); } (cond) {
+
+    ms = #update_msf(cond, ms);
+
+    cond = ctr < MLKEM_N;
+    if cond {
+      ms = #update_msf(cond, ms);
+
       val1 = (16u)buf[pos];
-      t   = (16u)buf[pos + 1];
+      val1 = #protect_16(val1, ms);
+
+      t = (16u)buf[pos + 1];
+      t = #protect_16(t, ms);
+
       val2 = t;
       val2 >>= 4;
       t &= 0x0F;
@@ -23,32 +37,49 @@ fn __rej_uniform(stack u16[MLKEM_N] rp, reg u64 offset, stack u8[SHAKE128_RATE] 
       val1 |= t;
 
       t   = (16u)buf[pos + 2];
+      t = #protect_16(t, ms);
+
       t <<= 4;
       val2 |= t;
       pos += 3;
 
-      if val1 < MLKEM_Q {
+      cond = val1 < MLKEM_Q;
+      if cond {
+        ms = #update_msf(cond, ms);
         rp[ctr] = val1;
         ctr += 1;
+      } else {
+        ms = #update_msf(!cond, ms);
       }
 
-      if val2 < MLKEM_Q {
-        if(ctr < MLKEM_N)
-        {
+      cond = val2 < MLKEM_Q;
+      if cond {
+        ms = #update_msf(cond, ms);
+
+        cond = ctr < MLKEM_N;
+        if cond {
+          ms = #update_msf(cond, ms);
           rp[ctr] = val2;
           ctr += 1;
+        } else {
+          ms = #update_msf(!cond, ms);
         }
+      } else {
+        ms = #update_msf(!cond, ms);
       }
+
     } else {
+      ms = #update_msf(!cond, ms);
       pos = SHAKE128_RATE;
     }
+
   }
 
   return ctr, rp;
 }
 
 inline
-fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
+fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed, reg u64 transposed) -> stack u16[MLKEM_K*MLKEM_VECN]
 {
   stack u8[34] extseed;
   stack u8[SHAKE128_RATE] buf;
@@ -59,8 +90,11 @@ fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
   reg u8 c;
   reg u16 t;
   reg u64 ctr k;
-  stack u64 sctr;
+  #mmx reg u64 sctr;
+  #mmx reg u64 stransposed;
   inline int j i;
+
+  stransposed = transposed;
 
   for j = 0 to MLKEM_SYMBYTES
   {
@@ -72,8 +106,18 @@ fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
   {
     for j = 0 to MLKEM_K
     {
-      extseed[MLKEM_SYMBYTES] = j;
-      extseed[MLKEM_SYMBYTES+1] = i;
+      transposed = stransposed;
+
+      if(transposed == 0)
+      {
+        extseed[MLKEM_SYMBYTES] = j;
+        extseed[MLKEM_SYMBYTES+1] = i;
+      }
+      else
+      {
+        extseed[MLKEM_SYMBYTES] = i;
+        extseed[MLKEM_SYMBYTES+1] = j;
+      }
 
       state = _shake128_absorb34(state, extseed);
 
@@ -83,61 +127,7 @@ fn __gen_matrix(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
         sctr = ctr;
         state, buf = _shake128_squeezeblock(state, buf);
         ctr = sctr;
-        ctr, poly  = __rej_uniform(poly, ctr, buf);
-      }
 
-      k = 0;
-      reg ptr u16[MLKEM_N] rij;
-      rij = r[i * MLKEM_VECN + j * MLKEM_N : MLKEM_N];
-      while (k < MLKEM_N)
-      {
-        t = poly[(int) k];
-        rij[k] = t;
-        k += 1;
-      }
-      r[i * MLKEM_VECN + j * MLKEM_N : MLKEM_N] = rij;
-    }
-  }
-  return r;
-}
-
-
-inline
-fn __gen_matrix_transpose(stack u8[MLKEM_SYMBYTES] seed) -> stack u16[MLKEM_K*MLKEM_VECN]
-{
-  stack u8[34] extseed;
-  stack u8[SHAKE128_RATE] buf;
-  stack u64[25] state;
-  stack u16[MLKEM_N] poly;
-  stack u16[MLKEM_K*MLKEM_VECN] r;
-
-  reg u8 c;
-  reg u16 t;
-  reg u64 ctr k;
-  stack u64 sctr;
-  inline int j i;
-
-  for j = 0 to MLKEM_SYMBYTES
-  {
-    c = seed[j];
-    extseed[j] = c;
-  }
-
-  for i=0 to MLKEM_K
-  {
-    for j = 0 to MLKEM_K
-    {
-      extseed[MLKEM_SYMBYTES] = i;
-      extseed[MLKEM_SYMBYTES+1] = j;
-
-      state = _shake128_absorb34(state, extseed);
-
-      ctr = 0;
-      while (ctr < MLKEM_N)
-      {
-        sctr = ctr;
-        state, buf = _shake128_squeezeblock(state, buf);
-        ctr = sctr;
         ctr, poly  = __rej_uniform(poly, ctr, buf);
       }
 

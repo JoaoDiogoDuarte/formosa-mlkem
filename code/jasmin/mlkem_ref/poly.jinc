@@ -200,6 +200,34 @@ fn _i_poly_compress(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_
 }
 
 
+fn _i_poly_decompress(reg ptr u16[MLKEM_N] rp, reg ptr u8 [MLKEM_POLYCOMPRESSEDBYTES] a) -> stack u16[MLKEM_N]
+{
+  reg u8 t;
+  reg u16 d0, d1;
+  reg u64 i;
+
+  i = 0;
+
+  while (i < 128) {
+    t  = a[i];
+    d0 = (16u)t;
+    d1 = (16u)t;
+    d0 &= 0xf;
+    d1 >>= 4;
+    d0 *= MLKEM_Q;
+    d1 *= MLKEM_Q;
+    d0 += 8;
+    d1 += 8;
+    d0 >>= 4;
+    d1 >>= 4;
+    rp[2 * i] = d0;
+    rp[2 * i + 1] = d1;
+    i += 1;
+  }
+  return rp;
+}
+
+
 fn _poly_decompress(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> stack u16[MLKEM_N]
 {
   reg u8 t;
@@ -255,7 +283,7 @@ fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
 }
 
 
-fn _poly_frombytes_regptr(reg ptr u16[MLKEM_N] rp, reg ptr u8[3*MLKEM_N/2] a) -> reg ptr u16[MLKEM_N], reg ptr u8[MLKEM_POLYBYTES]
+fn _i_poly_frombytes(reg ptr u16[MLKEM_N] rp, reg ptr u8[3*MLKEM_N/2] a) -> reg ptr u16[MLKEM_N], reg ptr u8[MLKEM_POLYBYTES]
 {
   reg u8 c0, c1, c2;
   reg u16 d0, d1, t;
@@ -647,7 +675,7 @@ fn _poly_tobytes(reg u64 rp, reg ptr u16[MLKEM_N] a) -> reg ptr u16[MLKEM_N]
   return a;
 }
 
-fn _poly_tobytes_regptr(reg ptr u8[MLKEM_POLYBYTES] r, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYBYTES], reg ptr u16[MLKEM_N]
+fn _i_poly_tobytes(reg ptr u8[MLKEM_POLYBYTES] r, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYBYTES], reg ptr u16[MLKEM_N]
 {
   reg u16 t0, t1, d;
   reg u64 i j;
