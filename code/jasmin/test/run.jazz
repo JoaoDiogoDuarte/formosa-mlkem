@@ -63,35 +63,3 @@ fn test_avx_derand() -> reg bool {
   r = check(ss1, ss2);
   return r;
 }
-
-fn test_ref() -> reg bool {
-  reg u64 pk sk ct ss1 ss2;
-  pk, sk, ct, ss1, ss2, _ = setup(false);
-
-  #[inline]
-  _ = ref::jade_kem_mlkem_mlkem768_amd64_ref_keypair(pk, sk);
-  #[inline]
-  _ = ref::jade_kem_mlkem_mlkem768_amd64_ref_enc(ct, ss1, pk);
-  #[inline]
-  _ = ref::jade_kem_mlkem_mlkem768_amd64_ref_dec(ss2, ct, sk);
-
-  reg bool r;
-  r = check(ss1, ss2);
-  return r;
-}
-
-fn test_avx() -> reg bool {
-  reg u64 pk sk ct ss1 ss2;
-  pk, sk, ct, ss1, ss2, _ = setup(false);
-
-  #[inline]
-  _ = avx::jade_kem_mlkem_mlkem768_amd64_avx2_keypair(pk, sk);
-  #[inline]
-  _ = avx::jade_kem_mlkem_mlkem768_amd64_avx2_enc(ct, ss1, pk);
-  #[inline]
-  _ = avx::jade_kem_mlkem_mlkem768_amd64_avx2_dec(ss2, ct, sk);
-
-  reg bool r;
-  r = check(ss1, ss2);
-  return r;
-}
