@@ -15,13 +15,16 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(reg u64 public_key se
 
   for i = 0 to (MLKEM_SYMBYTES*2)/8 { randomness[u64 i] = [fixedrand + 8*i]; }
 
-  () = #spill(public_key, secret_key, fixedrand);
-
   randomnessp = randomness;
+  public_key = public_key;
+  secret_key = secret_key;
+
+
+  () = #spill(public_key, secret_key, fixedrand, randomnessp);
+
   pk, sk = __crypto_kem_keypair_jazz(pk, sk, randomnessp);
 
- () = #spill(randomnessp);
- () = #unspill(public_key, secret_key);
+  () = #unspill(public_key, secret_key);
 
   for i=0 to MLKEM_PUBLICKEYBYTES/8 { t = pk[u64 i]; [public_key + 8*i] = t; }
   for i=0 to MLKEM_SECRETKEYBYTES/8 { t = sk[u64 i]; [secret_key + 8*i] = t; }
@@ -48,6 +51,9 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared
   for i = 0 to MLKEM_SYMBYTES { randomness[i] = (u8)[fixedrand + i]; }
   for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
 
+  ciphertext = ciphertext;
+  shared_secret = shared_secret;
+
   () = #spill(ciphertext, shared_secret, public_key, fixedrand);
 
   randomnessp = randomness;
@@ -63,104 +69,36 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared
 
   ?{}, r = #set0();
   return r;
-}
+ }
 
-
-export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair(reg u64 public_key secret_key) -> reg u64
+export fn jade_kem_mlkem_mlkem768_amd64_ref_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
 {
- reg u64 r t;
   inline int i;
-
-  stack u8[MLKEM_SYMBYTES*2] randomness;
-  stack u8[MLKEM_PUBLICKEYBYTES] pk;
-  stack u8[MLKEM_SECRETKEYBYTES] sk;
-
-  reg ptr u8[MLKEM_SYMBYTES*2] randomnessp;
-
-  _ = #init_msf();
-
-  () = #spill(public_key, secret_key);
-
-  randomnessp = randomness;
-  randomnessp = #randombytes(randomnessp);
-
-  pk, sk = __crypto_kem_keypair_jazz(pk, sk, randomnessp);
-
- () = #spill(randomnessp);
- () = #unspill(public_key, secret_key);
-
-  for i=0 to MLKEM_PUBLICKEYBYTES/8 { t = pk[u64 i]; [public_key + 8*i] = t; }
-  for i=0 to MLKEM_SECRETKEYBYTES/8 { t = sk[u64 i]; [secret_key + 8*i] = t; }
-
-  ?{}, r = #set0();
-  return r;
-}
-
-export fn jade_kem_mlkem_mlkem768_amd64_ref_enc(reg u64 ciphertext shared_secret public_key) -> reg u64
-{
-
   reg u64 r t;
-  inline int i;
-
-  stack u8[MLKEM_SYMBYTES] randomness;
   stack u8[MLKEM_CT_LEN] ct;
   stack u8[MLKEM_SYMBYTES] shk;
-  stack u8[MLKEM_PUBLICKEYBYTES] pk;
+  stack u8[MLKEM_SECRETKEYBYTES] sk;
 
-  reg ptr u8[MLKEM_SYMBYTES] randomnessp;
-  reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
+  reg ptr u8[MLKEM_SECRETKEYBYTES] skp;
+  reg ptr u8[MLKEM_CT_LEN] ctp;
 
   _ = #init_msf();
 
-  for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
+  for i = 0 to MLKEM_SECRETKEYBYTES/8 { sk[u64 i] = [secret_key + 8*i]; }
+  for i = 0 to MLKEM_CT_LEN/8 { ct[u64 i] = [ciphertext + 8*i]; }
 
-  () = #spill(ciphertext, shared_secret, public_key);
+  shared_secret = shared_secret;
+  ctp = ct;
+  skp = sk;
 
-  randomnessp = randomness;
-  randomnessp = #randombytes(randomnessp);
-  pkp = pk;
+  () = #spill(ctp, skp, shared_secret, ciphertext, secret_key);
 
-  ct, shk = __crypto_kem_enc_jazz(ct, shk, pkp, randomnessp);
+  shk = __crypto_kem_dec_jazz(shk, ctp, skp);
 
-  () = #spill(pkp, randomnessp);
-  () = #unspill(ciphertext, shared_secret);
+  () = #unspill(shared_secret);
 
   for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
-  for i=0 to MLKEM_CT_LEN/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
 
   ?{}, r = #set0();
   return r;
 }
-
-
-//export fn jade_kem_mlkem_mlkem768_amd64_ref_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
-//{
-//  inline int i;
-//  reg u64 r t;
-//  stack u8[MLKEM_CT_LEN] ct;
-//  stack u8[MLKEM_SYMBYTES] shk;
-//  stack u8[MLKEM_SECRETKEYBYTES] sk;
-//  reg ptr u8[MLKEM_SECRETKEYBYTES] skp;
-//  reg ptr u8[MLKEM_CT_LEN] ctp;
-//
-//  _ = #init_msf();
-//
-//  for i = 0 to MLKEM_SECRETKEYBYTES { sk[i] = (u8)[secret_key + i]; }
-//  for i = 0 to MLKEM_CT_LEN { ct[i] = (u8)[ciphertext + i]; }
-//
-//  () = #spill(shared_secret, ciphertext, secret_key);
-//
-//  ctp = ct;
-//  skp = sk;
-//
-//  shk = __crypto_kem_dec_jazz(shk, ctp, skp);
-//
-//  () = #spill(ctp, skp);
-//  () = #unspill(shared_secret);
-//
-//  for i=0 to MLKEM_SECRETKEYBYTES/8 { t = sk[u64 i]; [secret_key + 8*i] = t; }
-//
-//  ?{}, r = #set0();
-//  return r;
-//}
-//

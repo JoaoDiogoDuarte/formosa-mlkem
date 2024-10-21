@@ -10,16 +10,39 @@ fn __crypto_kem_keypair_jazz(
 {
 
   stack u8[32] h_pk;
+  stack u8[MLKEM_SECRETKEYBYTES] sk2;
+  reg u8 t;
+  inline int i;
 
   pk, sk = __indcpa_keypair(pk, sk, randomnessp[0:MLKEM_SYMBYTES]);
 
-  sk[MLKEM_POLYVECBYTES:MLKEM_PUBLICKEYBYTES] = pk;
+  () = #spill(pk, sk);
 
-  h_pk = _sha3_256_pk(h_pk, pk);
+  for i = 0 to MLKEM_PUBLICKEYBYTES {
+      t = pk[i];
+      sk2[MLKEM_POLYVECBYTES + i] = t;
+  }
+  () = #spill(t);
 
-  sk[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES:MLKEM_SYMBYTES] = h_pk;
+  h_pk = _sha3_256_1184(h_pk, pk);
 
-  sk[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + MLKEM_SYMBYTES:MLKEM_SYMBYTES] = randomnessp[MLKEM_SYMBYTES:MLKEM_SYMBYTES];
+  () = #unspill(t);
+  for i = 0 to MLKEM_SYMBYTES {
+      t = h_pk[i];
+      sk2[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + i] = t;
+  }
+
+  for i = 0 to MLKEM_SYMBYTES {
+      t = randomnessp[i + MLKEM_SYMBYTES];
+      sk2[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + MLKEM_SYMBYTES + i] = t;
+  }
+
+  () = #unspill(sk, pk);
+
+  for i = 0 to MLKEM_SECRETKEYBYTES {
+      t = sk2[i];
+      sk[i] = t;
+  }
 
   return pk, sk;
 
@@ -37,73 +60,64 @@ fn __crypto_kem_enc_jazz(
   stack u8[MLKEM_SYMBYTES * 2] kr buf;
   reg u64 t64;
 
-  () = #spill(ct, shk, pk);
+  () = #spill(ct, shk, pk, randomnessp);
 
   for i=0 to MLKEM_SYMBYTES/8 { t64 = randomnessp[u64 i]; buf[u64 i] = t64; }
 
-  buf[MLKEM_SYMBYTES:MLKEM_SYMBYTES] = _sha3_256_pk(buf[MLKEM_SYMBYTES:MLKEM_SYMBYTES], pk);
+  () = #spill(t64);
+
+  buf[MLKEM_SYMBYTES:MLKEM_SYMBYTES] = _sha3_256_1184(buf[MLKEM_SYMBYTES:MLKEM_SYMBYTES], pk);
 
   kr = _sha3_512_64(kr, buf);
 
-  () = #unspill(ct, pk);
+  () = #unspill(ct);
+
   ct = __indcpa_enc(ct, buf[0:MLKEM_SYMBYTES], pk, kr[MLKEM_SYMBYTES:MLKEM_SYMBYTES]);
 
-  () = #unspill(shk);
+  () = #unspill(shk, t64);
 
   for i=0 to MLKEM_SYMBYTES/8 { t64 = kr[u64 i]; shk[u64 i] = t64;}
+
+  () = #spill(ct, shk);
+
   return ct, shk;
 }
 
-//inline
-//fn __crypto_kem_dec_jazz(
-//    reg u64 shkp,
-//    reg u64 ctp,
-//    reg u64 skp)
-//    -> reg
-//{
-//  stack u8[MLKEM_CT_LEN] ctpc;
-//  stack u8[2*MLKEM_SYMBYTES] kr buf;
-//  stack u64 s_skp s_ctp s_shkp s_cnd;
-//  reg u64 pkp hp zp t64 cnd;
-//  inline int i;
-//
-//  s_shkp = shkp;
-//  s_ctp = ctp;
-//
-//  buf[0:MLKEM_MSGBYTES] = __indcpa_dec(buf[0:MLKEM_MSGBYTES], ctp, skp);
-//
-//  hp = skp;
-//  hp += 32 + (24 * MLKEM_K * MLKEM_N>>3);
-//
-//  for i=0 to MLKEM_SYMBYTES/8
-//  {
-//    t64 = (u64)[hp + 8*i];
-//    buf.[u64 MLKEM_SYMBYTES + 8*i] = t64;
-//  }
-//
-//  s_skp = skp;
-//
-//  kr = _sha3_512_64(kr, buf);
-//
-//  pkp = s_skp;
-//  pkp += 12 * MLKEM_K * MLKEM_N>>3;
-//
-//  ctpc = __iindcpa_enc(ctpc, buf[0:MLKEM_SYMBYTES], pkp, kr[MLKEM_SYMBYTES:MLKEM_SYMBYTES]);
-//
-//  ctp = s_ctp;
-//  cnd = __verify(ctp, ctpc);
-//  s_cnd = cnd;
-//
-//  zp = s_skp;
-//  zp += 64;
-//  zp += 24 * MLKEM_K * MLKEM_N>>3;
-//
-//  /* fixme: should this be done in memory? */
-//  shkp = s_shkp;
-//  _shake256_1120_32(shkp, zp, ctp);
-//
-//  shkp = s_shkp;
-//  cnd = s_cnd;
-//   __cmov(shkp, kr[0:MLKEM_SYMBYTES], cnd);
-//}
-//
+inline
+fn __crypto_kem_dec_jazz(
+    reg ptr u8[MLKEM_SYMBYTES] shk,
+    reg ptr u8[MLKEM_CT_LEN] ct,
+    reg ptr u8[MLKEM_SECRETKEYBYTES] sk)
+    -> reg ptr u8[MLKEM_SYMBYTES]
+{
+  stack u8[MLKEM_CT_LEN] ct2;
+  stack u8[2*MLKEM_SYMBYTES] kr buf;
+  reg u64 cnd;
+  reg u8 t64;
+  inline int i;
+
+  () = #spill(sk, ct, shk);
+
+  buf[0:MLKEM_MSGBYTES] = __indcpa_dec(buf[0:MLKEM_MSGBYTES], ct, sk);
+
+  for i = 0 to MLKEM_SYMBYTES{
+      t64 = sk[i + MLKEM_SECRETKEYBYTES-2*MLKEM_SYMBYTES];
+      buf[i + MLKEM_SYMBYTES] = t64;
+  }
+  () = #spill(t64);
+
+  kr = _sha3_512_64(kr, buf);
+
+  ct2 = __indcpa_enc(ct2, buf[0:MLKEM_SYMBYTES], sk[MLKEM_POLYVECBYTES:MLKEM_PUBLICKEYBYTES], kr[MLKEM_SYMBYTES:MLKEM_SYMBYTES]);
+
+  cnd = __verify(ct, ct2);
+
+  () = #spill(cnd);
+  () = #unspill(shk);
+
+  shk = _shake256_1120_32(shk, sk[MLKEM_SECRETKEYBYTES-MLKEM_SYMBYTES:MLKEM_SYMBYTES], ct);
+
+  shk = __cmov(shk, kr[0:MLKEM_SYMBYTES], cnd);
+
+  return shk;
+}
