@@ -106,7 +106,7 @@ $(RANDOMBYTES): $(PROJECT_DIR)/ext/randombytes/jasmin_syscall.c $(PROJECT_DIR)/e
 
 $(JASMIN_ASSEMBLY):
 %.s: %.jazz
-	$(JASMINC) -nowarning -o $@ $(JFLAGS) $^ 
+	$(JASMINC) -nowarning -lazyregalloc -o $@ $(JFLAGS) $^ 
 
 # --
 
