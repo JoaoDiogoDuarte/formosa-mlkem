@@ -295,7 +295,7 @@ fn _shake256_128_33(reg ptr u8[128] out, reg ptr u8[33] in) -> stack u8[128]
   return out;
 }
 
-fn _shake256_1120_32(reg ptr u8[MLKEM_SYMBYTES] out, reg ptr u8[MLKEM_SYMBYTES] in0, reg ptr u8[MLKEM_CT_LEN] in1) -> reg ptr u8[32] {
+fn _shake256_32_1120(reg ptr u8[MLKEM_SYMBYTES] out, reg ptr u8[MLKEM_SYMBYTES] in0, reg ptr u8[MLKEM_CT_LEN] in1) -> reg ptr u8[32] {
   stack u64[25] state;
   stack u8[MLKEM_CT_LEN] in;
   reg u64 t64;

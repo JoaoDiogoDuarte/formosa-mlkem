@@ -115,7 +115,7 @@ fn __crypto_kem_dec_jazz(
   () = #spill(cnd);
   () = #unspill(shk);
 
-  shk = _shake256_1120_32(shk, sk[MLKEM_SECRETKEYBYTES-MLKEM_SYMBYTES:MLKEM_SYMBYTES], ct);
+  shk = _shake256_32_1120(shk, sk[MLKEM_SECRETKEYBYTES-MLKEM_SYMBYTES:MLKEM_SYMBYTES], ct);
 
   shk = __cmov(shk, kr[0:MLKEM_SYMBYTES], cnd);
 

@@ -1,7 +1,7 @@
 require "params.jinc"
 require "fips202.jinc"
 
-export fn shake256_128_33_jazz(reg u64 outp inp) 
+export fn shake256_128_33_jazz(reg u64 outp inp)
 {
   stack u8[33] in;
   stack u8[128] out;
@@ -13,7 +13,7 @@ export fn shake256_128_33_jazz(reg u64 outp inp)
     c = (u8)[inp + i];
     in[i] = c;
   }
-  
+
   soutp = outp;
   out = _shake256_128_33(out, in);
   outp = soutp;
@@ -24,7 +24,37 @@ export fn shake256_128_33_jazz(reg u64 outp inp)
   }
 }
 
-export fn sha3512_32_jazz(reg u64 outp inp) 
+export fn shake256_32_1120_jazz(reg u64 outp inp0 inp1)
+{
+  stack u8[32] in0;
+  stack u8[1088] in1;
+  stack u8[32] out;
+  stack u64 soutp;
+  reg u8 c;
+  inline int i;
+
+  for i = 0 to 32 {
+    c = (u8)[inp0 + i];
+    in0[i] = c;
+  }
+
+  for i = 0 to 1088 {
+    c = (u8)[inp1 + i];
+    in1[i] = c;
+  }
+
+  soutp = outp;
+  out = _shake256_32_1120(out, in0, in1);
+  outp = soutp;
+
+  for i = 0 to 32 {
+    c = out[i];
+    (u8)[outp + i] = c;
+  }
+}
+
+
+export fn sha3_512_32_jazz(reg u64 outp inp)
 {
   stack u8[32] in;
   stack u8[64] out;
@@ -36,11 +66,55 @@ export fn sha3512_32_jazz(reg u64 outp inp)
     c = (u8)[inp + i];
     in[i] = c;
   }
-   
+
   soutp = outp;
-  out = _sha3512_32(out, in);
+  out = _sha3_512_32(out, in);
   outp = soutp;
   for i = 0 to 64 {
+    c = out[i];
+    (u8)[outp + i] = c;
+  }
+}
+
+export fn sha3_512_64_jazz(reg u64 outp inp)
+{
+  stack u8[64] in;
+  stack u8[64] out;
+  stack u64 soutp;
+  reg u8 c;
+  inline int i;
+
+  for i = 0 to 64 {
+    c = (u8)[inp + i];
+    in[i] = c;
+  }
+
+  soutp = outp;
+  out = _sha3_512_64(out, in);
+  outp = soutp;
+  for i = 0 to 64 {
+    c = out[i];
+    (u8)[outp + i] = c;
+  }
+}
+
+export fn sha3_1184_32_jazz(reg u64 outp inp)
+{
+  stack u8[1184] in;
+  stack u8[32] out;
+  stack u64 soutp;
+  reg u8 c;
+  inline int i;
+
+  for i = 0 to 1184 {
+    c = (u8)[inp + i];
+    in[i] = c;
+  }
+
+  soutp = outp;
+  out = _sha3_256_1184(out, in);
+  outp = soutp;
+  for i = 0 to 32 {
     c = out[i];
     (u8)[outp + i] = c;
   }
@@ -61,7 +135,7 @@ export fn shake128_absorb34_jazz(reg u64 statep, reg u64 inp)
   }
 
   state = _shake128_absorb34(state, in);
-  
+
   for i = 0 to 25 {
     t = state[i];
     [statep + 8*i] = t;
@@ -82,12 +156,12 @@ export fn shake128_squeezeblock_jazz(reg u64 outp, reg u64 statep)
     t = [statep + 8*i];
     state[i] = t;
   }
-  
+
   soutp   = outp;
   sstatep = statep;
 
   state, out = _shake128_squeezeblock(state, out);
-  
+
   outp   = soutp;
   statep = sstatep;
 
@@ -95,7 +169,7 @@ export fn shake128_squeezeblock_jazz(reg u64 outp, reg u64 statep)
     t = state[i];
     [statep + 8*i] = t;
   }
-  
+
   for i = 0 to SHAKE128_RATE {
     c = out[i];
     (u8)[outp + i] = c;
