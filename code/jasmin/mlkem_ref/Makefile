@@ -51,7 +51,7 @@ test: $(TESTS)
 
 speed: test/speed_indcpa
 
-# -- 
+# --
 
 HEADERS := \
   params.h \
@@ -106,7 +106,7 @@ $(RANDOMBYTES): $(PROJECT_DIR)/ext/randombytes/jasmin_syscall.c $(PROJECT_DIR)/e
 
 $(JASMIN_ASSEMBLY):
 %.s: %.jazz
-	$(JASMINC) -nowarning -lazyregalloc -o $@ $(JFLAGS) $^ 
+	$(JASMINC) -nowarning -o $@ $(JFLAGS) $^
 
 # --
 
@@ -175,5 +175,3 @@ clean:
 ifeq ($(OS),Darwin)
 	-rm -rf test/*.dSYM
 endif
-
-
