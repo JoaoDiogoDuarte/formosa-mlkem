@@ -7,41 +7,41 @@ fn __crypto_kem_keypair_jazz(
     reg ptr u8[MLKEM_SECRETKEYBYTES] sk,
     reg ptr u8[MLKEM_SYMBYTES*2] randomnessp)
     -> reg ptr u8[MLKEM_PUBLICKEYBYTES], reg ptr u8[MLKEM_SECRETKEYBYTES]
-{
+{ // TEST
 
   stack u8[32] h_pk;
   stack u8[MLKEM_SECRETKEYBYTES] sk2;
-  reg u8 t;
+  reg u64 t;
   inline int i;
 
   pk, sk = __indcpa_keypair(pk, sk, randomnessp[0:MLKEM_SYMBYTES]);
 
   () = #spill(pk, sk);
 
-  for i = 0 to MLKEM_PUBLICKEYBYTES {
-      t = pk[i];
-      sk2[MLKEM_POLYVECBYTES + i] = t;
+  for i = 0 to MLKEM_PUBLICKEYBYTES/8 {
+      t = pk[u64 i];
+      sk2.[u64 (MLKEM_POLYVECBYTES/8 + i)*8] = t;
   }
   () = #spill(t);
 
   h_pk = _sha3_256_1184(h_pk, pk);
 
   () = #unspill(t);
-  for i = 0 to MLKEM_SYMBYTES {
-      t = h_pk[i];
-      sk2[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + i] = t;
+  for i = 0 to MLKEM_SYMBYTES/8 {
+      t = h_pk[u64 i];
+      sk2.[u64 (MLKEM_POLYVECBYTES/8 + MLKEM_PUBLICKEYBYTES/8 + i)*8] = t;
   }
 
-  for i = 0 to MLKEM_SYMBYTES {
-      t = randomnessp[i + MLKEM_SYMBYTES];
-      sk2[MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + MLKEM_SYMBYTES + i] = t;
+  for i = 0 to MLKEM_SYMBYTES/8 {
+      t = randomnessp.[u64 (i + MLKEM_SYMBYTES/8)*8];
+      sk2.[u64 ((MLKEM_POLYVECBYTES + MLKEM_PUBLICKEYBYTES + MLKEM_SYMBYTES)/8 + i)*8] = t;
   }
 
   () = #unspill(sk, pk);
 
-  for i = 0 to MLKEM_SECRETKEYBYTES {
-      t = sk2[i];
-      sk[i] = t;
+  for i = 0 to MLKEM_SECRETKEYBYTES/8 {
+      t = sk2[u64 i];
+      sk[u64 i] = t;
   }
 
   return pk, sk;
@@ -55,7 +55,7 @@ fn __crypto_kem_enc_jazz(
     reg ptr u8[MLKEM_PUBLICKEYBYTES] pk,
     reg ptr u8[MLKEM_SYMBYTES] randomnessp)
     -> reg ptr u8[MLKEM_CT_LEN], reg ptr u8[MLKEM_SYMBYTES]
-{
+{ // TEST
   inline int i;
   stack u8[MLKEM_SYMBYTES * 2] kr buf;
   reg u64 t64;
@@ -89,20 +89,20 @@ fn __crypto_kem_dec_jazz(
     reg ptr u8[MLKEM_CT_LEN] ct,
     reg ptr u8[MLKEM_SECRETKEYBYTES] sk)
     -> reg ptr u8[MLKEM_SYMBYTES]
-{
+{// TEST
   stack u8[MLKEM_CT_LEN] ct2;
   stack u8[2*MLKEM_SYMBYTES] kr buf;
   reg u64 cnd;
-  reg u8 t64;
+  reg u64 t64;
   inline int i;
 
   () = #spill(sk, ct, shk);
 
   buf[0:MLKEM_MSGBYTES] = __indcpa_dec(buf[0:MLKEM_MSGBYTES], ct, sk);
 
-  for i = 0 to MLKEM_SYMBYTES{
-      t64 = sk[i + MLKEM_SECRETKEYBYTES-2*MLKEM_SYMBYTES];
-      buf[i + MLKEM_SYMBYTES] = t64;
+  for i = 0 to MLKEM_SYMBYTES/8{
+      t64 = sk.[u64 (i + (MLKEM_SECRETKEYBYTES-2*MLKEM_SYMBYTES)/8)*8];
+      buf.[(i + MLKEM_SYMBYTES/8)*8] = t64;
   }
   () = #spill(t64);
 

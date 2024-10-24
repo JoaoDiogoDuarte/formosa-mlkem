@@ -1,0 +1,48 @@
+require "params.jinc"
+require "polyvec.jinc"
+
+/* These exported functions are just for unit testing */
+
+export fn polyvec_tobytes_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_VECN] a;
+
+  for i = 0 to MLKEM_VECN {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+
+  __polyvec_tobytes(rp, a);
+}
+
+
+export fn polyvec_decompress_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_VECN] r;
+
+  r = __polyvec_decompress(ap);
+
+  for i = 0 to MLKEM_VECN {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
+
+export fn polyvec_frombytes_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_VECN] r;
+
+  r = __polyvec_frombytes(ap);
+
+  for i = 0 to MLKEM_VECN {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}

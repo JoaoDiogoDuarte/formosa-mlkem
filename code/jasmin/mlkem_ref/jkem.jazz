@@ -1,7 +1,7 @@
 require "kem.jinc"
 
 export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(reg u64 public_key secret_key fixedrand) -> reg u64
-{
+{ // TEST
   reg u64 r t;
   inline int i;
 
@@ -34,7 +34,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(reg u64 public_key se
 }
 
 export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared_secret public_key fixedrand) -> reg u64
-{
+{ // TEST
   reg u64 r t;
   inline int i;
 
@@ -48,8 +48,8 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared
 
   _ = #init_msf();
 
-  for i = 0 to MLKEM_SYMBYTES { randomness[i] = (u8)[fixedrand + i]; }
-  for i = 0 to MLKEM_PUBLICKEYBYTES { pk[i] = (u8)[public_key + i]; }
+  for i = 0 to MLKEM_SYMBYTES/8 { randomness[u64 i] = [fixedrand + 8*i]; }
+  for i = 0 to MLKEM_PUBLICKEYBYTES/8 { pk[u64 i]   = [public_key + 8*i]; }
 
   ciphertext = ciphertext;
   shared_secret = shared_secret;
@@ -72,7 +72,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_ref_enc_derand(reg u64 ciphertext shared
  }
 
 export fn jade_kem_mlkem_mlkem768_amd64_ref_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
-{
+{// TEST
   inline int i;
   reg u64 r t;
   stack u8[MLKEM_CT_LEN] ct;

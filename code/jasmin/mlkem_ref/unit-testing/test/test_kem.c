@@ -29,7 +29,7 @@ int main(void)
 
   unsigned char randomness0[2*MLKEM_SYMBYTES];
   unsigned char randomness1[2*MLKEM_SYMBYTES];
-  
+
   FILE *urandom = fopen("/dev/urandom", "r");
 
   while(test_ok == 1 && test_iteration < TEST_ITERATIONS)
@@ -40,8 +40,8 @@ int main(void)
     assert(ri == 1);
 
     /* TEST KEYPAIR */
-    jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(pk1, sk1, randomness0);
     crypto_kem_keypair(pk0, sk0, randomness0);
+    jade_kem_mlkem_mlkem768_amd64_ref_keypair_derand(pk1, sk1, randomness0);
 
     for(int i=0;i<MLKEM_SECRETKEYBYTES;i++)
     { if(sk0[i] != sk1[i])
@@ -108,7 +108,7 @@ int main(void)
     { if(shk0[i] != shk1[i])
       { fprintf(stderr, "ERROR: crypto_kem_dec (fail -- corrupt byte): %d %d %d\n", i, shk0[i], shk1[i]);
         test_ok_kem_dec_failure = 0;
-        test_ok = 0;  
+        test_ok = 0;
       }
     }
 

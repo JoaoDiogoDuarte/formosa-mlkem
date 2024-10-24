@@ -4,7 +4,7 @@ require "polyvec.jinc"
 require "gen_matrix.jinc"
 
 inline
-fn __indcpa_keypair(
+fn __indcpa_keypair( // TEST
     reg ptr u8[MLKEM_PUBLICKEYBYTES] pk,
     reg ptr u8[MLKEM_SECRETKEYBYTES] sk,
     reg ptr u8[MLKEM_SYMBYTES] randomnessp)
@@ -35,7 +35,7 @@ fn __indcpa_keypair(
   for i = 0 to MLKEM_SYMBYTES/8 {
       t64 = buf[u64 i];
       publicseed[u64 i] = t64;
-      t64 = buf.[u64 8*i + MLKEM_SYMBYTES];
+      t64 = buf.[u64 (i + MLKEM_SYMBYTES/8)*8];
       noiseseed[u64 i] = t64;
   }
 
@@ -72,8 +72,8 @@ fn __indcpa_keypair(
 
   () = #unspill(pk, sk);
 
-  pk[0:MLKEM_POLYVECBYTES] = __polyvec_tobytes(pk[0:MLKEM_POLYVECBYTES], pkpv);
-  sk[0:MLKEM_POLYVECBYTES] = __polyvec_tobytes(sk[0:MLKEM_POLYVECBYTES], skpv);
+  pk[0:MLKEM_POLYVECBYTES] = __i_polyvec_tobytes(pk[0:MLKEM_POLYVECBYTES], pkpv);
+  sk[0:MLKEM_POLYVECBYTES] = __i_polyvec_tobytes(sk[0:MLKEM_POLYVECBYTES], skpv);
 
   () = #unspill(t64);
   for i = 0 to MLKEM_POLYVECBYTES/8 {
@@ -83,7 +83,7 @@ fn __indcpa_keypair(
 
   for i = 0 to MLKEM_SYMBYTES/8 {
       t64 = publicseed[u64 i];
-      pk2.[u64 8*i + MLKEM_POLYVECBYTES] = t64;
+      pk2.[u64 (i + MLKEM_POLYVECBYTES/8)*8] = t64;
   }
 
   for i = 0 to MLKEM_PUBLICKEYBYTES/8 {
@@ -93,35 +93,37 @@ fn __indcpa_keypair(
 
   () = #spill(t64);
 
-
   return pk, sk;
 }
 
 inline
 fn __indcpa_enc(
     reg ptr u8[MLKEM_CT_LEN] ct,
-    reg ptr u8[32] msgp,
+    reg ptr u8[MLKEM_MSGBYTES] msgp,
     reg ptr u8[MLKEM_PUBLICKEYBYTES] pk,
     reg ptr u8[MLKEM_SYMBYTES] noiseseed)
     -> reg ptr u8[MLKEM_CT_LEN]
-{
+{ // TEST
   stack u16[MLKEM_VECN] pkpv sp ep bp;
   stack u16[MLKEM_K*MLKEM_VECN] aat;
   stack u16[MLKEM_N] k epp v;
   stack u8[MLKEM_SYMBYTES] publicseed;
-  reg u8 nonce t;
+  reg u8 nonce;
+  reg u64 t;
   stack u8[MLKEM_SYMBYTES] s_noiseseed;
   inline int i;
   s_noiseseed = noiseseed;
 
   () = #spill(pk, ct);
 
-  pkpv = __polyvec_frombytes(pk[0:MLKEM_POLYVECBYTES]);
+  pkpv = __i_polyvec_frombytes(pk[0:MLKEM_POLYVECBYTES]);
 
-  for i = 0 to MLKEM_SYMBYTES {
-      t = pk[MLKEM_POLYVECBYTES + i];
-      publicseed[i] = t;
+  for i = 0 to MLKEM_SYMBYTES/8 {
+      t = pk.[u64 (MLKEM_POLYVECBYTES + i)*8];
+      publicseed[u64 i] = t;
   }
+
+  () = #spill(t);
 
   k = _i_poly_frommsg(k, msgp);
 
@@ -180,7 +182,7 @@ fn __indcpa_dec(
     reg ptr u8[MLKEM_CT_LEN] ct,
     reg ptr u8[MLKEM_SECRETKEYBYTES] sk)
     -> reg ptr u8[MLKEM_N/8]
-{
+{ // TEST
 
   stack u16[MLKEM_N] t v mp;
   stack u16[MLKEM_VECN] bp skpv;
@@ -190,7 +192,7 @@ fn __indcpa_dec(
   bp = __i_polyvec_decompress(ct[0:MLKEM_POLYVECCOMPRESSEDBYTES]);
   v = _i_poly_decompress(v, ct[MLKEM_POLYVECCOMPRESSEDBYTES:MLKEM_POLYCOMPRESSEDBYTES]);
 
-  skpv = __polyvec_frombytes(sk[0:MLKEM_POLYVECBYTES]);
+  skpv = __i_polyvec_frombytes(sk[0:MLKEM_POLYVECBYTES]);
 
   bp = __polyvec_ntt(bp);
   t = __polyvec_pointwise_acc(skpv, bp);

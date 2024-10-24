@@ -2,7 +2,7 @@ require "params.jinc"
 
 inline
 fn __verify(reg ptr u8[MLKEM_CT_LEN] ct, reg ptr u8[MLKEM_CT_LEN] ctc) -> reg u64
-{
+{ // TEST
   () = #spill(ct, ctc);
   reg u64 cnd t64;
   reg u8 t1 t2;
@@ -34,7 +34,7 @@ fn __cmov(reg ptr u8[MLKEM_SYMBYTES] dst,
           reg ptr u8[MLKEM_SYMBYTES] src,
           reg u64 cnd)
           -> reg ptr u8[MLKEM_SYMBYTES]
-{
+{ // TEST
   reg u8 t1 t2;
   inline int i;
   cnd = -cnd;

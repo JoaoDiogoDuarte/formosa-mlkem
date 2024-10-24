@@ -1,0 +1,46 @@
+require "params.jinc"
+require "poly.jinc"
+
+/* These exported functions are just for unit testing */
+
+export fn poly_decompress_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_N] r;
+
+  r = _poly_decompress(r, ap);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
+export fn poly_tobytes_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_N] a;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+
+  a = _poly_tobytes(rp, a);
+}
+
+export fn poly_frombytes_reg_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  stack u16[MLKEM_N] r;
+
+  r = _poly_frombytes(r, ap);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}

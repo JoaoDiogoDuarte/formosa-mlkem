@@ -1,0 +1,90 @@
+require "params.jinc"
+require "poly.jinc"
+
+/* These exported functions are just for unit testing */
+
+export fn poly_tobytes_stack_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u8[MLKEM_POLYBYTES] r;
+  stack u16[MLKEM_N] a;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+
+  for i = 0 to MLKEM_POLYBYTES {
+    t8 = (u8)[rp + i];
+    r[i] = t8;
+  }
+
+  r, a = _i_poly_tobytes(r, a);
+
+  for i = 0 to MLKEM_POLYBYTES {
+    t8 = r[i];
+    (u8)[rp + i] = t8;
+  }
+
+}
+
+
+export fn poly_frombytes_stack_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u16[MLKEM_N] r;
+  stack u8[MLKEM_POLYBYTES] a;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  for i = 0 to MLKEM_POLYBYTES {
+      t8 = (u8)[ap + i];
+      a[i] = t8;
+  }
+
+  r, a = _i_poly_frombytes(r, a);
+
+  for i = 0 to MLKEM_N {
+    t = r[i] ;
+    (u16)[rp + 2*i] = t;
+  }
+
+  for i = 0 to MLKEM_POLYBYTES {
+    t8 = a[i];
+    (u8)[ap + i] = t8;
+  }
+}
+
+
+export fn poly_decompress_stack_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u16[MLKEM_N] r;
+  stack u8 [MLKEM_POLYCOMPRESSEDBYTES] a;
+
+  for i = 0 to MLKEM_N {
+    t = (u16)[rp + 2*i];
+    r[i] = t;
+  }
+
+  for i = 0 to MLKEM_POLYCOMPRESSEDBYTES {
+      t8 = (u8)[ap + i];
+      a[i] = t8;
+  }
+
+  r = _i_poly_decompress(r, a);
+
+  for i = 0 to MLKEM_N {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}

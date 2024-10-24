@@ -6,6 +6,8 @@
 #define TEST_ITERATIONS 10000
 #endif
 
+#include "test_polyvec_setrandom.c"
+
 int main(void)
 {
   int test_ok = 1;
@@ -13,7 +15,7 @@ int main(void)
   size_t ri;
 
   unsigned char in[MLKEM_POLYVECCOMPRESSEDBYTES];
-  polyvec r0, r1;
+  polyvec r0, r1, r2;
 
   FILE *urandom = fopen("/dev/urandom", "r");
 
@@ -22,13 +24,28 @@ int main(void)
     ri = fread(in, 1, MLKEM_POLYVECCOMPRESSEDBYTES, urandom);
     assert(ri == MLKEM_POLYVECCOMPRESSEDBYTES);
 
+    polyvec_setrandom(&r0);
+
+    for(int i = 0;i<MLKEM_K;i++) {
+      for(int j = 0;j<MLKEM_N;j++) {
+        r1.vec[i].coeffs[j] = r0.vec[i].coeffs[j];
+        r2.vec[i].coeffs[j] = r0.vec[i].coeffs[j];
+      }
+   }
+
     polyvec_decompress(&r0, in);
-    polyvec_decompress_jazz(&r1, in);
+    polyvec_decompress_reg_jazz(&r1, in);
+    polyvec_decompress_stack_jazz(&r2, in);
 
     for(int i=0;i<MLKEM_K;i++)
     { for(int j=0;j<MLKEM_N;j++)
       { if(r0.vec[i].coeffs[j] != r1.vec[i].coeffs[j])
-        { fprintf(stderr, "ERROR: polyvec_decompress: %d,%d: %d, %d\n", i, j, r0.vec[i].coeffs[j], r1.vec[i].coeffs[j]);
+        { fprintf(stderr, "ERROR: polyvec_reg_decompress: %d,%d: %d, %d\n", i, j, r0.vec[i].coeffs[j], r1.vec[i].coeffs[j]);
+          test_ok = 0;
+        }
+
+        if(r0.vec[i].coeffs[j] != r2.vec[i].coeffs[j])
+        { fprintf(stderr, "ERROR: polyvec_stack_decompress: %d,%d: %d, %d\n", i, j, r0.vec[i].coeffs[j], r2.vec[i].coeffs[j]);
           test_ok = 0;
         }
       }
