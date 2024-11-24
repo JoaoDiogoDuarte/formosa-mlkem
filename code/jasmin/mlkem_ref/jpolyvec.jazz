@@ -187,3 +187,68 @@ export fn polyvec_reduce_jazz(reg u64 rp)
     (u16)[rp + 2*i] = t;
   }
 }
+
+export fn _i_polyvec_tobytes_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u16[MLKEM_VECN] a;
+  stack u8[MLKEM_POLYVECBYTES] r;
+
+  for i = 0 to MLKEM_VECN {
+    t = (u16)[ap + 2*i];
+    a[i] = t;
+  }
+  r = __i_polyvec_tobytes(r, a);
+
+  for i = 0 to MLKEM_POLYVECBYTES {
+    t8 = r[i];
+    (u8)[rp + i] = t8;
+  }
+
+}
+
+export fn _i_polyvec_decompress_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u16[MLKEM_VECN] r;
+  stack u8 [MLKEM_POLYVECCOMPRESSEDBYTES] a;
+
+  for i = 0 to MLKEM_POLYVECCOMPRESSEDBYTES {
+    t8 = (u8)[ap + i];
+    a[i] = t8;
+  }
+
+  r = __i_polyvec_decompress(a);
+
+  for i = 0 to MLKEM_VECN {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
+
+
+
+export fn _i_polyvec_frombytes_jazz(reg u64 rp, reg u64 ap)
+{
+  inline int i;
+  reg u16 t;
+  reg u8 t8;
+  stack u16[MLKEM_VECN] r;
+  stack u8[MLKEM_POLYVECBYTES] a;
+
+  for i = 0 to MLKEM_POLYVECBYTES {
+    t8 = (u8)[ap + i];
+    a[i] = t8;
+  }
+
+  r = __i_polyvec_frombytes(a);
+
+  for i = 0 to MLKEM_VECN {
+    t = r[i];
+    (u16)[rp + 2*i] = t;
+  }
+}
