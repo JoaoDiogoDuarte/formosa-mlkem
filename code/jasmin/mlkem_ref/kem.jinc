@@ -38,7 +38,7 @@ fn __crypto_kem_keypair_jazz(
 
   () = #unspill(sk, pk);
 
-  for i = 0 to MLKEM_SECRETKEYBYTES/8 { // TODO: we can save some copies
+  for i = 0 to MLKEM_SECRETKEYBYTES/8 {
       t = sk2[u64 i];
       sk[u64 i] = t;
   }
