@@ -162,6 +162,10 @@ inline fn keccakf1600_set_row(
 {
   inline int x x1 x2;
   reg u64 t;
+  stack u64[5] s_b;
+  
+  s_b = b;
+  
 
   for x=0 to 5
   {
@@ -175,6 +179,8 @@ inline fn keccakf1600_set_row(
     if( x==0 && y==0 ){ t ^= s_rc; }
     e[x + y*5] = t;
   }
+  
+  s_b = b;
 
   return e;
 }
@@ -187,7 +193,7 @@ inline fn keccakf1600_round(
   reg ptr u64[25]
       {
   inline int y;
-  reg u64[5] c d b;  
+  reg u64[5] c d b;
   stack u64 s_rc;
   
   s_rc = rc;
