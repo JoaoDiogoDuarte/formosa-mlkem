@@ -1,8 +1,9 @@
 require "params.jinc"
 
 inline 
-fn __verify(reg u64 ctp, reg ptr u8[MLKEM_INDCPA_CIPHERTEXTBYTES] ctpc) -> reg u64
+fn __verify(reg ptr u8[MLKEM_CT_LEN] ct, reg ptr u8[MLKEM_CT_LEN] ctc) -> reg u64
 {
+  () = #spill(ct, ctc);
   reg u256 f g h;
   reg u64 cnd t64;
   reg u8 t1 t2;
@@ -15,8 +16,8 @@ fn __verify(reg u64 ctp, reg ptr u8[MLKEM_INDCPA_CIPHERTEXTBYTES] ctpc) -> reg u
 
   for i=0 to MLKEM_INDCPA_CIPHERTEXTBYTES/32
   {
-    f = ctpc.[u256 32*i];
-    g = (u256)[ctp + 32*i];
+    f = ctc.[u256 32*i];
+    g = ct.[u256 32*i];
     f = #VPXOR_256(f, g);
     h = #VPOR_256(h, f);
   }
@@ -29,13 +30,13 @@ fn __verify(reg u64 ctp, reg ptr u8[MLKEM_INDCPA_CIPHERTEXTBYTES] ctpc) -> reg u
 
   for i=off to MLKEM_INDCPA_CIPHERTEXTBYTES
   {
-    t1 = ctpc.[i];
-    t2 = (u8)[ctp + i];
+    t1 = ct.[i];
+    t2 = ctc.[i];
     t1 ^= t2;
     t64 = (64u)t1;
     cnd |= t64;
   }
-
+  
   cnd = -cnd;
   cnd >>= 63;
 
@@ -43,24 +44,28 @@ fn __verify(reg u64 ctp, reg ptr u8[MLKEM_INDCPA_CIPHERTEXTBYTES] ctpc) -> reg u
 }
 
 inline
-fn __cmov(reg u64 dst, reg ptr u8[MLKEM_SYMBYTES] src, reg u64 cnd)
+fn __cmov(reg ptr u8[MLKEM_SYMBYTES] dst,
+          reg ptr u8[MLKEM_SYMBYTES] src,
+          reg u64 cnd)
+          -> reg ptr u8[MLKEM_SYMBYTES]
 {
   reg u256 f g m;
-  stack u64 scnd;
   reg u8 t1 t2 bcond;
-  inline int i off;
-
+  inline int i off;  
+  
   cnd = -cnd;
-  scnd = cnd;
+  
+  () = #spill(dst, src, cnd);
+  
 
-  m = #VPBROADCAST_4u64(scnd);
+  m = #VPBROADCAST_4u64(cnd);
 
   for i=0 to MLKEM_SYMBYTES/32
   {
     f = src.[u256 32*i];
-    g = (u256)[dst + 32*i];
+    g = dst.[u256 32*i];
     f = #VPBLENDVB_256(f, g, m);
-    (u256)[dst + 32*i] = f;
+    dst.[u256 32*i] = f;
   }
 
   off = MLKEM_SYMBYTES/32 * 32;
@@ -69,11 +74,17 @@ fn __cmov(reg u64 dst, reg ptr u8[MLKEM_SYMBYTES] src, reg u64 cnd)
   bcond = (8u)cnd;
   for i=off to MLKEM_SYMBYTES
   {
-    t2 = (u8)[dst + i];
-    t1 = src[i];
-    t2 = t2 ^ t1;
+    t2 = dst.[i];
+    t1 = src.[i];
+    t2 = t2 ^ t1;    
     t2 = t2 & cnd;
     t1 ^= t2;
-    (u8)[dst + i] = t1;
+    () = #spill(t1, t2);
+    
+    dst.[i] = t1;
+    
+    () = #unspill(t1, t2);
   }
+  
+  return dst;
 }

@@ -16,12 +16,18 @@ void shake256(unsigned char *output, unsigned long long outlen, const unsigned c
 void sha3_256(unsigned char *output, const unsigned char *input,  unsigned long long inlen);
 void sha3_512(unsigned char *output, const unsigned char *input,  unsigned long long inlen);
 
-
-
 void shake256_128_33_jazz(unsigned char *output, const unsigned char *input);
+
+void shake256_1120_32_jazz(unsigned char *output, const unsigned char *input);
+
 void sha3_512_32_jazz(unsigned char *output, const unsigned char *input);
 
+void sha3_512_64_jazz(unsigned char *output, const unsigned char *input);
+
+void sha3_256_1184_jazz(unsigned char *output, const unsigned char *input);
+
 void shake128_absorb34_jazz(uint64_t *s, const unsigned char *input);
+
 void shake128_squeezeblock_jazz(unsigned char *output, uint64_t *s);
 
 

@@ -3,21 +3,20 @@ namespace OLD_KECCAK {
 require "keccak_OLD/fips202.jinc"
 require "keccak_OLD/fips202_4x.jinc"
 
-inline fn _sha3_256A_M1184
+inline fn _sha3_256A_A1184
 ( #spill_to_mmx reg mut ptr u8[32] out
-, #spill_to_mmx reg u64 in
+, #spill_to_mmx reg const ptr u8[1184] in
 ) -> reg ptr u8[32]
-{ reg u64 inlen;
-  inlen = 1184;
-  out = _isha3_256(out, in, inlen);
+{ 
+  out = _sha3_256_1184(out, in);
   return out;
 }
 
-inline fn _shake256_M32__M32_M1088
-( reg u64 out
-, reg u64 in0 in1 // 32+MLKEM_INDCPA_CIPHERTEXTBYTES
+inline fn _shake256_A32__A32_A1088
+  ( #spill_to_mmx reg mut ptr u8[32] out,
+  #spill_to_mmx reg const ptr u8[1120] in
 )
-{ _shake256_1120_32(out, in0, in1); }
+{ out = _shake256_32_1120(out, in); }
 
 inline fn _shake256_A128__A32_A1
 ( reg mut ptr u8[128] out
@@ -69,12 +68,6 @@ inline fn _shake256x4_A128__A32_A1
   return out0, out1, out2, out3;
 }
 
-inline fn _sha3_256A_A32
-( #spill_to_mmx reg mut ptr u8[32] out
-, reg const ptr u8[32] in
-) -> reg ptr u8[32]
-{ out = _isha3_256_32(out, in); return out; }
-
 inline fn _sha3_512A_A64
 ( reg mut ptr u8[64] out
 , reg const ptr u8[64] in
@@ -93,18 +86,18 @@ namespace NEW_KECCAK {
 require "mlkem_keccak_avx2.jinc"
 }
 
-inline fn _sha3_256A_M1184
+inline fn _sha3_256A_A1184
 ( #spill_to_mmx reg mut ptr u8[32] out
-, #spill_to_mmx reg u64 in
+, #spill_to_mmx reg const ptr u8[1184] in
 ) -> reg ptr u8[32]
-{ out = NEW_KECCAK::_sha3_256A_M1184(out, in); return out; }
+{ out = NEW_KECCAK::_sha3_256A_A1184(out, in); return out; }
 
 
-inline fn _shake256_M32__M32_M1088
-( reg u64 out
-, reg u64 in0 in1 // 32+MLKEM_INDCPA_CIPHERTEXTBYTES
-)
-{ NEW_KECCAK::_shake256_M32__M32_M1088(out, in0, in1); }
+inline fn _shake256_A32__A1120
+(  reg mut ptr u8[32] out
+   , reg const ptr u8[1120] in
+) -> reg ptr u8[32]
+{ out = NEW_KECCAK::_shake256_A32__A1120(out, in); return out; }
 
 inline fn _shake256_A128__A32_A1
 ( reg mut ptr u8[128] out

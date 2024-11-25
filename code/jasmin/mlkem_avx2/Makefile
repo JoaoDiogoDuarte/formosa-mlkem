@@ -18,7 +18,7 @@ default: test
 
 test: test/test_kem
 
-testX: test/test_poly_compress \
+test: test/test_poly_compress \
       test/test_poly_decompress \
       test/test_poly_tobytes \
       test/test_poly_frombytes \
@@ -48,7 +48,8 @@ testX: test/test_poly_compress \
 	    test/test_kem
 
 speed: test/speed_indcpa \
-       test/speed_mlkem
+       test/speed_mlkem  \
+			 test/speed_fips202
 
 HEADERS = params.h poly.h fips202.h ntt.h indcpa.h kem.h \
 
@@ -83,6 +84,9 @@ test/speed_indcpa: test/speed_indcpa.c $(HEADERS) $(SOURCES) $(INCS) jindcpa.o
 
 test/speed_mlkem: test/speed_mlkem.c $(HEADERS) $(SOURCES) $(INCS) jspeed.s
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) jspeed.s $<
+
+test/speed_fips202: test/speed_fips202.c $(HEADERS) $(SOURCES) $(INCS) jfips202.o
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) jfips202.o $<
 
 test/test_fips202: test/test_fips202.c $(HEADERS) fips202.c jfips202.s
 	$(CC) $(CFLAGS) -o $@ fips202.c jfips202.s $<

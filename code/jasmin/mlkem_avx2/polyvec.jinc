@@ -60,6 +60,37 @@ fn __polyvec_decompress(reg u64 rp) -> stack u16[MLKEM_VECN]
   return r;
 }
 
+inline
+fn __i_polyvec_decompress(reg ptr u8[MLKEM_CT_LEN] rp) -> stack u16[MLKEM_VECN]
+{
+  inline int i k;
+  reg u256 f q shufbidx sllvdidx mask;
+  stack u16[MLKEM_VECN] r;
+
+  q = #VPBROADCAST_8u32(pvd_q_s);
+  shufbidx = pvd_shufbdidx_s[u256 0];
+  sllvdidx = #VPBROADCAST_4u64(pvd_sllvdidx_s);
+  mask = #VPBROADCAST_8u32(pvd_mask_s);
+
+  for k=0 to MLKEM_K
+  {
+    for i=0 to MLKEM_N/16
+    {
+      f = rp.[u256 320 * k + 20 * i];
+      f = #VPERMQ(f, 0x94);
+      f = #VPSHUFB_256(f, shufbidx);
+      f = #VPSLLV_8u32(f, sllvdidx);
+      f = #VPSRL_16u16(f, 1);
+      f = #VPAND_256(f, mask);
+      f = #VPMULHRS_16u16(f, q);
+      r[u256 16*k + i] = f;
+    }
+  }
+
+  return r;
+}
+
+
 u16 pvc_off_s = 0x0f;
 u16 pvc_shift1_s = 0x1000;
 u16 pvc_mask_s = 0x03ff;
@@ -114,7 +145,7 @@ fn __polyvec_compress(reg u64 rp, stack u16[MLKEM_VECN] a)
 }
 
 inline
-fn __polyvec_compress_1(reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES] rp, stack u16[MLKEM_VECN] a) -> reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES]
+fn __i_polyvec_compress(reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES] rp, stack u16[MLKEM_VECN] a) -> reg ptr u8[MLKEM_POLYVECCOMPRESSEDBYTES]
 {
   inline int i;
   reg u256 f0 f1 f2 v v8 off shift1 mask shift2 sllvdidx shufbidx;
@@ -172,6 +203,23 @@ fn __polyvec_frombytes(reg u64 ap) -> stack u16[MLKEM_VECN]
   r[MLKEM_N:MLKEM_N] = _poly_frombytes(r[MLKEM_N:MLKEM_N], pp);
   pp += MLKEM_POLYBYTES;
   r[2*MLKEM_N:MLKEM_N] = _poly_frombytes(r[2*MLKEM_N:MLKEM_N], pp);
+
+  return r;
+}
+
+inline
+fn __i_polyvec_frombytes(reg ptr u8[MLKEM_POLYVECBYTES] ap) -> stack u16[MLKEM_VECN]
+{
+  stack u16[MLKEM_VECN] r;
+  stack u8[MLKEM_POLYVECBYTES] a;
+  a = ap;
+
+  () = #spill(ap);
+  r[0:MLKEM_N], a[0:MLKEM_POLYBYTES] = _i_poly_frombytes(r[0:MLKEM_N], a[0:MLKEM_POLYBYTES]);
+
+  r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES] = _i_poly_frombytes(r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
+
+  r[2*MLKEM_N:MLKEM_N], a[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES] = _i_poly_frombytes(r[2*MLKEM_N:MLKEM_N], a[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
 
   return r;
 }
@@ -238,4 +286,16 @@ fn __polyvec_tobytes(reg u64 rp, stack u16[MLKEM_VECN] a)
   a[MLKEM_N:MLKEM_N] = _poly_tobytes(pp, a[MLKEM_N:MLKEM_N]);
   pp += MLKEM_POLYBYTES;
   a[2*MLKEM_N:MLKEM_N] = _poly_tobytes(pp, a[2*MLKEM_N:MLKEM_N]);
+}
+
+
+inline
+fn __i_polyvec_tobytes(reg ptr u8 [MLKEM_POLYVECBYTES] r, stack u16[MLKEM_VECN] a) -> reg ptr u8 [MLKEM_POLYVECBYTES]
+{
+  r[0:MLKEM_POLYBYTES], a[0:MLKEM_N] = _i_poly_tobytes(r[0:MLKEM_POLYBYTES], a[0:MLKEM_N]);
+
+  r[MLKEM_POLYBYTES:MLKEM_POLYBYTES], a[MLKEM_N:MLKEM_N] = _i_poly_tobytes(r[MLKEM_POLYBYTES:MLKEM_POLYBYTES], a[MLKEM_N:MLKEM_N]);
+  r[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES], a[2*MLKEM_N:MLKEM_N] = _i_poly_tobytes(r[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES], a[2*MLKEM_N:MLKEM_N]);
+
+  return r;
 }

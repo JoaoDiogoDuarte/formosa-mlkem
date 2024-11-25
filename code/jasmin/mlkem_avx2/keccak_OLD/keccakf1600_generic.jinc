@@ -27,38 +27,38 @@ u64[24] KECCAK1600_RC =
   ,0x8000000080008008
 };
 
+
+u64[25] RHO_OFFSETS = {
+   0x0000000000000000
+  ,0x0000000000000001
+  ,0x000000000000003e
+  ,0x000000000000001c
+  ,0x000000000000001b
+  ,0x0000000000000024
+  ,0x000000000000002c
+  ,0x0000000000000006
+  ,0x0000000000000037
+  ,0x0000000000000014
+  ,0x0000000000000003
+  ,0x000000000000000a
+  ,0x000000000000002b
+  ,0x0000000000000019
+  ,0x0000000000000027
+  ,0x0000000000000029
+  ,0x000000000000002d
+  ,0x000000000000000f
+  ,0x0000000000000015
+  ,0x0000000000000008
+  ,0x0000000000000012
+  ,0x0000000000000002
+  ,0x000000000000003d
+  ,0x0000000000000038
+  ,0x000000000000000e
+};
+
 inline fn keccakf1600_index(inline int x y) -> inline int
 {
   inline int r;
   r = (x % 5) + 5 * (y % 5);
   return r;
 }
-
-
-inline fn keccakf1600_rho_offsets(inline int i) -> inline int
-{
-  inline int r x y z t;
-
-  r = 0;
-  x = 1;
-  y = 0;
-
-  for t = 0 to 24
-  { if (i == x + 5 * y)
-    { r = ((t + 1) * (t + 2) / 2) % 64; }
-    z = (2 * x + 3 * y) % 5;
-    x = y;
-    y = z;
-  }
-
-  return r;
-}
-
-inline fn keccakf1600_rhotates(inline int x y) -> inline int
-{
-  inline int i r;
-  i = keccakf1600_index(x, y);
-  r = keccakf1600_rho_offsets(i);
-  return r;
-}
-
