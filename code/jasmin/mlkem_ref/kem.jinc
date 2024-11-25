@@ -91,6 +91,7 @@ fn __crypto_kem_dec_jazz(
 {
   stack u8[MLKEM_CT_LEN] ct2;
   stack u8[2*MLKEM_SYMBYTES] kr buf;
+  stack u8[MLKEM_CT_LEN + MLKEM_SYMBYTES] buf2;
   reg u64 cnd;
   reg u64 t64;
   inline int i;
@@ -113,8 +114,17 @@ fn __crypto_kem_dec_jazz(
 
   () = #spill(cnd);
   () = #unspill(shk);
-
-  shk = _shake256_1120_32(shk, sk[MLKEM_SECRETKEYBYTES-MLKEM_SYMBYTES:MLKEM_SYMBYTES], ct);
+  
+  for i = 0 to MLKEM_SYMBYTES/8{
+      t64 = sk.[u64 (i + (MLKEM_SECRETKEYBYTES-MLKEM_SYMBYTES)/8) * 8];
+      buf2.[u64 8*i] = t64;
+  }
+  for i = 0 to MLKEM_CT_LEN/8{
+      t64 = ct.[u64 i*8];
+      buf2.[u64 (i + MLKEM_SYMBYTES/8)*8] = t64;
+  }
+  
+  shk = _shake256_1120_32(shk, buf2);
   shk = __cmov(shk, kr[0:MLKEM_SYMBYTES], cnd);
 
   return shk;

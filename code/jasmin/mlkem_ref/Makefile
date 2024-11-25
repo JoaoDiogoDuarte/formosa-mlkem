@@ -7,7 +7,7 @@ CFLAGS := -Wall -Wextra -g -O3 -fomit-frame-pointer
 JFLAGS := ${JADDFLAGS} -lazy-regalloc
 OS     := $(shell uname -s)
 
-.SECONDARY: jpoly.s jpolyvec.s jfips203.s jindcpa.s jkem.s
+.SECONDARY: jpoly.s jpolyvec.s jfips202.s jindcpa.s jkem.s
 
 default: test speed
 
@@ -40,14 +40,14 @@ test: test/test_poly_compress \
 			test/test_indcpa \
 			test/test_kem
 
-speed: test/speed_indcpa
+speed: test/speed_indcpa test/speed_fips202
 
 HEADERS = params.h poly.h fips202.h kem.h
 
 
 JHEADERS = params.jinc \
 				   reduce.jinc \
-           			fips202.jinc \
+           fips202.jinc \
 					 kem.jinc \
 					 verify.jinc
 
@@ -67,6 +67,9 @@ test/test_kem: test/test_kem.c $(HEADERS) $(SOURCES) $(INCS) jkem.o
 
 test/speed_indcpa: test/speed_indcpa.c $(HEADERS) $(SOURCES) jindcpa.o
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) jindcpa.o $<
+
+test/speed_fips202: test/speed_fips202.c $(HEADERS) $(SOURCES) jfips202.o
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) jfips202.o $<
 
 test/test_fips202: test/test_fips202.c $(HEADERS) $(SOURCES) jfips202.s
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) jfips202.s $<

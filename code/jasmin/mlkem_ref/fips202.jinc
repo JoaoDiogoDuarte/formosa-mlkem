@@ -125,10 +125,10 @@ inline fn keccakf1600_rol_sum(
   reg u64[5] d,
   inline int y)
   ->
-  reg ptr u64[5]
+  reg u64[5]
 {
   inline int r x x_ y_;
-  stack u64[5] b;
+  reg u64[5] b;
 
   for x = 0 to 5
   {
@@ -154,7 +154,7 @@ inline fn keccakf1600_rol_sum(
 // -- when x and y are 0: E[0,0] ^= RC[i];
 inline fn keccakf1600_set_row(
   reg ptr u64[25] e,
-  reg ptr u64[5] b,
+  reg u64[5] b,
   inline int y,
   stack u64 s_rc)
   ->
@@ -187,9 +187,7 @@ inline fn keccakf1600_round(
   reg ptr u64[25]
       {
   inline int y;
-  reg u64[5] c d;
-  stack u64[5] b;
-  
+  reg u64[5] c d b;  
   stack u64 s_rc;
   
   s_rc = rc;
@@ -266,57 +264,44 @@ fn _shake256_128_33(#spill_to_mmx reg ptr u8[128] out, reg const ptr u8[33] in) 
 
 fn _shake256_1120_32 (
     #spill_to_mmx reg ptr u8[MLKEM_SYMBYTES] out, 
-    reg ptr u8[MLKEM_SYMBYTES] in0, 
-    reg ptr u8[MLKEM_CT_LEN] in1) -> reg ptr u8[32] 
+    reg ptr u8[1120] in) -> reg ptr u8[32] 
 {
-
   stack u64[25] state;
-  stack u8[MLKEM_CT_LEN+MLKEM_SYMBYTES] in;
-  reg u64 t;
+  reg u64 t64;
   inline int i j pos;
 
-  state = __st0(state);
-
-  for i = 0 to MLKEM_SYMBYTES/8 {
-    t = in0[u64 i];
-    in[u64 i] = t;
-  }
-
-  for i = 0 to MLKEM_CT_LEN/8 {
-    t = in1[u64 i];
-    in.[u64 (i + MLKEM_SYMBYTES/8)*8] = t;
-  }
-
   pos = 0;
-  
+  state = __st0(state);
+    
   for i = 0 to 8 // floor(1120/136) = 8
-  {        
+  {      
     for j = 0 to SHAKE256_RATE/8
     {
-      t = in.[u64 ((pos/8 + j)*8)];
-      state[u64 j] ^= t;
+      t64 = in.[u64 (pos/8 + j)*8];
+      state[u64 j] ^= t64;
     }
-    pos += SHAKE256_RATE;
-    state = __keccakf1600(state);
+    
+     pos += SHAKE256_RATE;
+     state = __keccakf1600(state);
   }
   
   for i = 0 to 4
   {
-    t = in.[u64 ((i + pos/8)*8)];
-    state[u64 i] ^= t;
+    t64 = in.[u64 (i + pos/8)*8];
+    state[i] ^= t64;
   }
 
   state[u8 32] ^= 0x1f;
-  i = SHAKE256_RATE-1;
-  state[u8 i] ^= 0x80;
+  state[u8 SHAKE256_RATE-1] ^= 0x80;  
+  
   state = __keccakf1600(state);
-
+  
   for i=0 to MLKEM_SYMBYTES/8
   {
-    t = state[i];
-    out[u64 i] = t;
+    t64 = state[i];
+    out[u64 i] = t64;
   }
-  
+
   return out;
 }
 

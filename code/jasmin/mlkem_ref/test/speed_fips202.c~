@@ -1,0 +1,234 @@
+#include "../mlkem-in-c/fips202.h"
+#include "../mlkem-in-c/speed.h"
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef iS
+#define iS 10000
+#endif
+
+#define MAXINLEN 11840
+#define MAXOUTLEN 1680
+
+static inline uint64_t cpucycles(void) {
+  uint64_t result;
+
+  asm volatile("rdtsc; shlq $32,%%rdx; orq %%rdx,%%rax"
+               : "=a"(result)
+               :
+               : "%rdx");
+
+  return result;
+}
+
+static int cmp_uint64(const void *a, const void *b) {
+  if (*(uint64_t *)a < *(uint64_t *)b)
+    return -1;
+  if (*(uint64_t *)a > *(uint64_t *)b)
+    return 1;
+  return 0;
+}
+
+static uint64_t median(uint64_t *l, size_t llen) {
+  qsort(l, llen, sizeof(uint64_t), cmp_uint64);
+
+  if (llen % 2)
+    return l[llen / 2];
+  else
+    return (l[llen / 2 - 1] + l[llen / 2]) / 2;
+}
+
+static uint64_t average(uint64_t *t, size_t tlen) {
+  size_t i;
+  uint64_t acc = 0;
+
+  for (i = 0; i < tlen; i++)
+    acc += t[i];
+
+  return acc / tlen;
+}
+
+uint64_t cpucycles_overhead(void) {
+  uint64_t t0, t1, overhead = -1LL;
+  unsigned int i;
+
+  for (i = 0; i < 100000; i++) {
+    t0 = cpucycles();
+    __asm__ volatile("");
+    t1 = cpucycles();
+    if (t1 - t0 < overhead)
+      overhead = t1 - t0;
+  }
+
+  return overhead;
+}
+
+void print_results(const char *s, uint64_t *t, size_t tlen) {
+  size_t i;
+  static uint64_t overhead = -1;
+
+  if (overhead == (uint64_t)-1)
+    overhead = cpucycles_overhead();
+
+  tlen--;
+
+  for (i = 0; i < tlen; ++i)
+    t[i] = t[i + 1] - t[i] - overhead;
+
+  printf("%s\n", s);
+  printf("median: %llu cycles/ticks\n", (unsigned long long)median(t, tlen));
+  printf("average: %llu cycles/ticks\n", (unsigned long long)average(t, tlen));
+  printf("\n");
+}
+
+void print_results_jasmin(const char *s, uint64_t *t, size_t tlen) {
+  printf("%s\n", s);
+  printf("median: %llu cycles/ticks\n", (unsigned long long)median(t, tlen));
+  printf("average: %llu cycles/ticks\n", (unsigned long long)average(t, tlen));
+  printf("\n");
+}
+
+int main(void) {
+  int i;
+  unsigned char in[MAXINLEN];
+  unsigned char in0[MAXINLEN];
+  unsigned char out0[MAXOUTLEN];
+  unsigned char out1[MAXOUTLEN];
+  unsigned char out2[MAXOUTLEN];
+  uint64_t state0[25];
+  uint64_t state1[25];
+  uint64_t state2[25];
+
+  FILE *urandom = fopen("/dev/urandom", "r");
+  uint64_t t0[iS], t1[iS], t2[iS];
+
+  size_t ri = fread(in, 1, sizeof(in), urandom);
+  assert(ri == sizeof(in));
+  memcpy(in0, &in[32], 1120);
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    shake256(out0, 128, in, 33);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    shake256_128_33_reg_jazz(out1, in);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    shake256_128_33_stack_jazz(out2, in);
+  }
+  print_results("shake256_c: ", t0, iS);
+  print_results("shake256_reg: ", t1, iS);
+  print_results("shake256_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    sha3_512(out0, in, 32);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    sha3_512_32_reg_jazz(out1, in);
+  }
+  for (i = 0; i < iS; i++) {
+    sha3_512_32_stack_jazz(out2, in);
+    t2[i] = cpucycles();
+  }
+  print_results("sha3_512_32_c: ", t0, iS);
+  print_results("sha3_512_32_reg: ", t1, iS);
+  print_results("sha3_512_32_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    sha3_512(out0, in, 64);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    sha3_512_64_reg_jazz(out1, in);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    sha3_512_64_stack_jazz(out2, in);
+  }
+  print_results("sha3_512_64_c: ", t0, iS);
+  print_results("sha3_512_64_reg: ", t1, iS);
+  print_results("sha3_512_64_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    sha3_256(out0, in, 1184);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    sha3_256_1184_reg_jazz(out1, in);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    sha3_256_1184_stack_jazz(out2, in);
+  }
+  print_results("sha3_256_1184_c: ", t0, iS);
+  print_results("sha3_256_1184_reg: ", t1, iS);
+  print_results("sha3_256_1184_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    shake256(out0, 32, in, 1120);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    shake256_32_1120_reg_jazz(out1, in, in0);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    shake256_32_1120_stack_jazz(out2, in, in0);
+  }
+  print_results("_shake256_32_1120_c: ", t0, iS);
+  print_results("_shake256_32_1120_reg: ", t1, iS);
+  print_results("_shake256_32_1120_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    shake128_absorb(state0, in, 34);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    shake128_absorb34_reg_jazz(state1, in);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    shake128_absorb34_stack_jazz(state2, in);
+  }
+  print_results("shake128_absorb34_c: ", t0, iS);
+  print_results("shake128_absorb34_reg: ", t1, iS);
+  print_results("shake128_absorb34_stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  for (i = 0; i < iS; i++) {
+    t0[i] = cpucycles();
+    shake128_squeezeblocks(out0, 1, state0);
+  }
+  for (i = 0; i < iS; i++) {
+    t1[i] = cpucycles();
+    shake128_squeezeblock_reg_jazz(out1, state1);
+  }
+  for (i = 0; i < iS; i++) {
+    t2[i] = cpucycles();
+    shake128_squeezeblock_stack_jazz(out2, state2);
+  }
+  print_results("shake128_squareblock__c: ", t0, iS);
+  print_results("shake128_squareblock__reg: ", t1, iS);
+  print_results("shake128_squareblock__stack: ", t2, iS);
+  printf("------------------------------\n");
+
+  fclose(urandom);
+  return 0;
+}
