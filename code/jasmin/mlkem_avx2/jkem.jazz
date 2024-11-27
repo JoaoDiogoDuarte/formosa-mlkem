@@ -34,7 +34,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(reg u64 ciphertext share
 {
   reg u64 r t;
   stack u8[MLKEM_SYMBYTES] randomness;
-  stack u8[MLKEM_CT_LEN] ct;
+  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
   stack u8[MLKEM_SYMBYTES] shk;
   stack u8[MLKEM_PUBLICKEYBYTES] pk;
   reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
@@ -57,7 +57,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(reg u64 ciphertext share
   
   () = #unspill(ciphertext, shared_secret);
   for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
-  for i=0 to MLKEM_CT_LEN/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
+  for i=0 to MLKEM_CIPHERTEXTBYTES/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
   ?{}, r = #set0();
   return r;
 }
@@ -66,16 +66,17 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(reg u64 ciphertext share
 export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
 {
   reg u64 r t;
-  stack u8[MLKEM_CT_LEN] ct;
+  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
   stack u8[MLKEM_SYMBYTES] shk;
   stack u8[MLKEM_SECRETKEYBYTES] sk;
   reg ptr u8[MLKEM_SECRETKEYBYTES] skp;
-  reg ptr u8[MLKEM_CT_LEN] ctp;
+  reg ptr u8[MLKEM_CIPHERTEXTBYTES] ctp;
+  inline int i;
 
   _ = #init_msf();
 
   for i = 0 to MLKEM_SECRETKEYBYTES/8 { sk[u64 i] = [secret_key + 8*i]; }
-  for i = 0 to MLKEM_CT_LEN/8 { ct[u64 i] = [ciphertext + 8*i]; }
+  for i = 0 to MLKEM_CIPHERTEXTBYTES/8 { ct[u64 i] = [ciphertext + 8*i]; }
 
   shared_secret = shared_secret;
   ctp = ct;

@@ -29,8 +29,8 @@ fn __verify(reg ptr u8[MLKEM_INDCPA_CIPHERTEXTBYTES] ct, reg ptr u8[MLKEM_INDCPA
 
   for i=off to MLKEM_INDCPA_CIPHERTEXTBYTES
   {
-    t1 = ctpc.[i];
-    t2 = ctc.[i];
+    t1 = ct.[i];
+    t2 = ctpc.[i];
     t1 ^= t2;
     t64 = (64u)t1;
     cnd |= t64;

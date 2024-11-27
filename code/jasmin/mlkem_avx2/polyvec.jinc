@@ -61,7 +61,7 @@ fn __polyvec_decompress(reg u64 rp) -> stack u16[MLKEM_VECN]
 }
 
 inline
-fn __i_polyvec_decompress(reg ptr u8[MLKEM_CIPHERBTEXTBYTES] rp) -> stack u16[MLKEM_VECN]
+fn __i_polyvec_decompress(reg ptr u8[MLKEM_CIPHERTEXTBYTES] rp) -> stack u16[MLKEM_VECN]
 {
   inline int i k;
   reg u256 f q shufbidx sllvdidx mask;

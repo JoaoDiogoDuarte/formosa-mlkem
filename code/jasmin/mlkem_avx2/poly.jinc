@@ -2,8 +2,8 @@ require "params.jinc"
 require "shuffle.jinc"
 require "consts.jinc"
 require "reduce.jinc"
+require "mlkem_keccak_avx2.jinc"
 
-require "keccak_OLD/fips202_common.jinc"
 /* replaced by "mlkem_keccak_avx2"...
 require "fips202.jinc"
 require "fips202_4x.jinc"
@@ -336,50 +336,36 @@ fn _poly_decompress(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> stack u16[MLKEM_N]
   return rp;
 }
 
-fn _i_poly_compress(reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES] rp, reg ptr u16[MLKEM_N] a) -> reg ptr u8[MLKEM_POLYCOMPRESSEDBYTES], reg ptr u16[MLKEM_N]
-{
-  inline int i;
-  reg u256 f0 f1 f2 f3 v shift1 mask shift2 permidx;
+fn _i_poly_decompress(reg ptr u16[MLKEM_N] rp, reg ptr u8 [MLKEM_POLYCOMPRESSEDBYTES] a) -> stack u16[MLKEM_N]
+{  inline int i;
+  reg u256 f q shufbidx mask shift;
+  reg u128 h;
   reg ptr u16[16] x16p;
+  reg ptr u8[32] x32p;
+  stack u128 sh;
+  
+  x16p = jqx16;
+  q = x16p[u256 0];
+  x32p = pd_jshufbidx;
+  shufbidx = x32p[u256 0];
+  mask = #VPBROADCAST_8u32(pd_mask_s);
+  shift = #VPBROADCAST_8u32(pd_shift_s);
+  f = #set0_256();
 
-  a = _poly_csubq(a);
-
-  x16p = jvx16;
-  v = x16p[u256 0];
-  shift1 = #VPBROADCAST_16u16(pc_shift1_s);
-  mask = #VPBROADCAST_16u16(pc_mask_s);
-  shift2 = #VPBROADCAST_16u16(pc_shift2_s);
-  permidx = pc_permidx_s[u256 0];
-
-  for i=0 to MLKEM_N/64
+for i=0 to MLKEM_N/16
   {
-    f0 = a[u256 4*i];
-    f1 = a[u256 4*i + 1];
-    f2 = a[u256 4*i + 2];
-    f3 = a[u256 4*i + 3];
-    f0 = #VPMULH_16u16(f0, v);
-    f1 = #VPMULH_16u16(f1, v);
-    f2 = #VPMULH_16u16(f2, v);
-    f3 = #VPMULH_16u16(f3, v);
-    f0 = #VPMULHRS_16u16(f0, shift1);
-    f1 = #VPMULHRS_16u16(f1, shift1);
-    f2 = #VPMULHRS_16u16(f2, shift1);
-    f3 = #VPMULHRS_16u16(f3, shift1);
-    f0 = #VPAND_256(f0, mask);
-    f1 = #VPAND_256(f1, mask);
-    f2 = #VPAND_256(f2, mask);
-    f3 = #VPAND_256(f3, mask);
-    f0 = #VPACKUS_16u16(f0, f1);
-    f2 = #VPACKUS_16u16(f2, f3);
-    f0 = #VPMADDUBSW_256(f0, shift2);
-    f2 = #VPMADDUBSW_256(f2, shift2);
-    f0 = #VPACKUS_16u16(f0, f2);
-    f0 = #VPERMD(permidx, f0);
-    rp.[u256 32*i] = f0;
-  }
+    h = (128u)a.[u64 8*i];
+    sh = h;
+    f = #VPBROADCAST_2u128(sh);
+    f = #VPSHUFB_256(f, shufbidx);
+    f = #VPAND_256(f, mask);
+    f = #VPMULL_16u16(f, shift);
+    f = #VPMULHRS_16u16(f, q);
+    rp[u256 i] = f;
+   }
+   return rp;
+ }
 
-  return rp, a; 
-}
 
 fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
 {
@@ -655,7 +641,7 @@ fn _i_poly_frommsg(reg ptr u16[MLKEM_N] rp, reg ptr u8[32] ap) -> stack u16[MLKE
 }
 
 
-param int NOISE_NBLOCKS = (MLKEM_ETA1 * MLKEM_N/4 + SHAKE256_RATE - 1)/SHAKE256_RATE;
+param int NOISE_NBLOCKS = (MLKEM_ETA1 * MLKEM_N/4 + R136 - 1)/R136;
 
 u8[32] cbd_jshufbidx = {0, 1, 2, -1, 3, 4, 5, -1, 6, 7, 8, -1, 9, 10, 11, -1,
                         4, 5, 6, -1, 7, 8, 9, -1, 10, 11, 12, -1, 13, 14, 15, -1};
@@ -888,13 +874,13 @@ fn _poly_getnoise(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_SYMBYTES] seed, reg 
 
 /* OLD_KECCAK
 inline
-fn __shake256_squeezenblocks4x(reg ptr u256[25] state, reg ptr u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3) -> reg ptr u256[25], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE], reg ptr u8[NOISE_NBLOCKS*SHAKE256_RATE]
+fn __shake256_squeezenblocks4x(reg ptr u256[25] state, reg ptr u8[NOISE_NBLOCKS * R136] buf0 buf1 buf2 buf3) -> reg ptr u256[25], reg ptr u8[NOISE_NBLOCKS*R136], reg ptr u8[NOISE_NBLOCKS*R136], reg ptr u8[NOISE_NBLOCKS*R136], reg ptr u8[NOISE_NBLOCKS*R136]
 {
   inline int i;
 
   for i = 0 to NOISE_NBLOCKS
   {
-    state, buf0[i*SHAKE256_RATE:SHAKE256_RATE], buf1[i*SHAKE256_RATE:SHAKE256_RATE], buf2[i*SHAKE256_RATE:SHAKE256_RATE], buf3[i*SHAKE256_RATE:SHAKE256_RATE] = __shake256_squeezeblock4x(state, buf0[i*SHAKE256_RATE:SHAKE256_RATE], buf1[i*SHAKE256_RATE:SHAKE256_RATE], buf2[i*SHAKE256_RATE:SHAKE256_RATE], buf3[i*SHAKE256_RATE:SHAKE256_RATE]);
+    state, buf0[i*R136:R136], buf1[i*R136:R136], buf2[i*R136:R136], buf3[i*R136:R136] = __shake256_squeezeblock4x(state, buf0[i*R136:R136], buf1[i*R136:R136], buf2[i*R136:R136], buf3[i*R136:R136]);
   }
 
   return state, buf0, buf1, buf2, buf3;
@@ -905,7 +891,7 @@ fn _poly_getnoise_eta1_4x(reg ptr u16[MLKEM_N] r0 r1 r2 r3, reg ptr u8[MLKEM_SYM
 {
   reg u256 f;
   stack u256[25] state;
-  stack u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3;
+  stack u8[NOISE_NBLOCKS * R136] buf0 buf1 buf2 buf3;
 
   f = seed[u256 0];
   buf0[u256 0] = f;
@@ -977,7 +963,7 @@ fn _poly_getnoise_eta1122_4x(reg ptr u16[MLKEM_N] r0 r1 r2 r3, reg ptr u8[MLKEM_
 {
   reg u256 f;
   stack u256[25] state;
-  stack u8[NOISE_NBLOCKS * SHAKE256_RATE] buf0 buf1 buf2 buf3;
+  stack u8[NOISE_NBLOCKS * R136] buf0 buf1 buf2 buf3;
 
   f = seed[u256 0];
   buf0[u256 0] = f;
