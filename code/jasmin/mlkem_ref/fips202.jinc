@@ -121,6 +121,7 @@ inline fn keccakf1600_theta_rol(reg u64[5] c) -> reg u64[5]
 //     (2 3)         (1 0)  y' = 1x + 0y
 //
 inline fn keccakf1600_rol_sum(
+  reg ptr u64[5] b,
   reg ptr u64[25] a,
   reg u64[5] d,
   inline int y)
@@ -128,7 +129,7 @@ inline fn keccakf1600_rol_sum(
   reg u64[5]
 {
   inline int r x x_ y_;
-  reg u64[5] b;
+  reg u64 t;
 
   for x = 0 to 5
   {
@@ -137,14 +138,13 @@ inline fn keccakf1600_rol_sum(
     r = keccakf1600_rhotates(x_, y_);
 
     // B[x] = A[x',y']
-    b[x] = a[x_ + y_*5];
-
-    // B[x] ^= D[x'];
-    b[x] ^= d[x_];
-
+    t = a[x_ + y_*5];
+    t ^= d[x_];
+    
     // B[x] = ROT( B[x], r[x',y'] );
     if(r != 0)
-    { _, _, b[x] = #ROL_64(b[x], r); }
+    { _, _, t = #ROL_64(t, r); }
+    b[x] = t;
 
   }
   return b;
@@ -154,33 +154,24 @@ inline fn keccakf1600_rol_sum(
 // -- when x and y are 0: E[0,0] ^= RC[i];
 inline fn keccakf1600_set_row(
   reg ptr u64[25] e,
-  reg u64[5] b,
+  reg ptr u64[5] b,
   inline int y,
   stack u64 s_rc)
   ->
   reg ptr u64[25]
-{
+{  
   inline int x x1 x2;
-  reg u64 t;
-  stack u64[5] s_b;
-  
-  s_b = b;
-  
-
+  reg u64 t;   
   for x=0 to 5
   {
     x1 = (x + 1) % 5;
     x2 = (x + 2) % 5;
 
-    // t  = !b[x1] & b[x2]; // bmi1
-    t = b[x1]; t = !t; t &= b[x2];
-
-    t ^= b[x];
-    if( x==0 && y==0 ){ t ^= s_rc; }
+    t = b[x1]; t = !t; t &= b[x2]; t ^= b[x];
+    if (x == 0 && y == 0) { t ^= s_rc;}   
     e[x + y*5] = t;
   }
-  
-  s_b = b;
+    
 
   return e;
 }
@@ -191,18 +182,20 @@ inline fn keccakf1600_round(
   reg u64 rc)
   ->
   reg ptr u64[25]
-      {
+  {
   inline int y;
-  reg u64[5] c d b;
-  stack u64 s_rc;
+  reg u64[5] c d;
+  stack u64[5] b;  
   
+  stack u64 s_rc;
+    
   s_rc = rc;
   
   c = keccakf1600_theta_sum(a);
   d = keccakf1600_theta_rol(c);
   
   for y = 0 to 5
-  { b = keccakf1600_rol_sum(a, d, y);  
+  { b = keccakf1600_rol_sum(b, a, d, y);
     e = keccakf1600_set_row(e, b, y, s_rc);
   }
   
@@ -210,21 +203,20 @@ inline fn keccakf1600_round(
 }
 
 inline fn __keccakf1600(reg ptr u64[25] a) -> reg ptr u64[25]
-{
-  reg ptr u64[25] e;
-  stack u64[25] s_e;
-  
+{   
+  stack u64[25] e;  
   inline int i;
-  e = s_e;
 
   for i = 0 to KECCAK_ROUNDS/2
   {
-    e = keccakf1600_round(e, a, KECCAK1600_RC[(int) 2*i]);
-    a = keccakf1600_round(a, e, KECCAK1600_RC[(int) 2*i + 1]);
+    e = keccakf1600_round(e, a, KECCAK1600_RC[(int) 2*i]);            
+    a = keccakf1600_round(a, e, KECCAK1600_RC[(int) 2*i + 1]);    
+    
   }
 
   return a;
 }
+
 
 inline
 fn __st0(reg ptr u64[25] state) -> reg ptr u64[25]
@@ -237,9 +229,11 @@ fn __st0(reg ptr u64[25] state) -> reg ptr u64[25]
   return state;
 }
 
+
 fn _shake256_128_33(#spill_to_mmx reg ptr u8[128] out, reg const ptr u8[33] in) -> stack u8[128]
 {
-  stack u64[25] state;
+  stack u64[25] state; 
+  
   reg u64 t;
   reg u8 c;
   inline int i;
@@ -337,6 +331,7 @@ fn _sha3_512_32(#spill_to_mmx reg ptr u8[64] out, reg const ptr u8[32] in) -> st
   return out;
 }
 
+
 fn _shake128_absorb34(reg ptr u64[25] state, reg const ptr u8[34] in) -> reg ptr u64[25]
 {
   reg u8 c;
@@ -377,15 +372,44 @@ fn _shake128_squeezeblock(reg ptr u64[25] state, reg ptr u8[SHAKE128_RATE] out) 
   return state, out;
 }
 
+fn _sha3_512_64(#spill_to_mmx reg ptr u8[64] out, reg const ptr u8[64] in) -> stack u8[64]
+{
+  stack u64[25] state;
+  reg u64 t64;
+  inline int i;
+  
+  state = __st0(state);
+
+  for i = 0 to 8
+  {
+    t64 = in[u64 i];
+    state[i] ^= t64;
+  }
+
+  state[u8 64] ^= 0x06;
+  state[u8 SHA3_512_RATE - 1] ^= 0x80;
+  state = __keccakf1600(state);  
+  
+  for i = 0 to 8
+  {
+    t64 = state[i];
+    out[u64 i] = t64;
+  }
+  
+  return out;
+}
+
 fn _sha3_256_1184(#spill_to_mmx reg ptr u8[32] out, reg ptr u8[MLKEM_PUBLICKEYBYTES] in) -> reg ptr u8[32]
 {
   stack u64[25] state;
   reg u64 t64;
   inline int i j pos;
-
+  
   pos = 0;
-  state = __st0(state);
     
+  state = __st0(state);
+          
+        
   for i = 0 to 8 // floor(1184/136) = 8
   {      
     for j = 0 to SHA3_256_RATE/8
@@ -414,34 +438,5 @@ fn _sha3_256_1184(#spill_to_mmx reg ptr u8[32] out, reg ptr u8[MLKEM_PUBLICKEYBY
     out[u64 i] = t64;
   }
 
-  return out;
-}
-
-
-#[returnaddress="stack"]
-fn _sha3_512_64(#spill_to_mmx reg ptr u8[64] out, reg const ptr u8[64] in) -> stack u8[64]
-{
-  stack u64[25] state;
-  reg u64 t64;
-  inline int i;
-
-  state = __st0(state);
-
-  for i = 0 to 8
-  {
-    t64 = in[u64 i];
-    state[i] ^= t64;
-  }
-
-  state[u8 64] ^= 0x06;
-  state[u8 SHA3_512_RATE - 1] ^= 0x80;
-  state = __keccakf1600(state);  
-  
-  for i = 0 to 8
-  {
-    t64 = state[i];
-    out[u64 i] = t64;
-  }
-  
   return out;
 }
