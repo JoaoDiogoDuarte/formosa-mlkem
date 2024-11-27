@@ -62,3 +62,25 @@ inline fn keccakf1600_index(inline int x y) -> inline int
   r = (x % 5) + 5 * (y % 5);
   return r;
 }
+
+
+inline fn keccakf1600_rhotates(inline int x y) -> inline int
+{
+  inline int i r;
+  i = keccakf1600_index(x, y);
+  r = RHO_OFFSETS[i];
+  return r;
+}
+
+
+inline
+fn __st0(reg ptr u64[25] state) -> reg ptr u64[25]
+{
+  inline int i;
+
+  for i = 0 to 25 {
+    state[i] = 0;
+  }
+
+  return state;
+}
