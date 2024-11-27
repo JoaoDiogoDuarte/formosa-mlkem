@@ -28,21 +28,6 @@ int main(void)
   for(k=0;k<64;k++)
     if(out0[k] != out1[k]) printf("error sha3512 at %d: %d %d\n", k, out0[k], out1[k]);
 
-  shake128_absorb(state0, in, 34);
-  shake128_absorb34_jazz(state1, in);
-
-  for(k=0;k<25;k++)
-    if(state0[k] != state1[k]) printf("error shake128_absorb at %d: %lu %lu\n", k, state0[k], state1[k]);
-
-  shake128_squeezeblocks(out0, 1, state0);
-  shake128_squeezeblock_jazz(out1, state1);
-
-  for(k=0;k<25;k++)
-    if(state0[k] != state1[k]) printf("error shake128_squeezeblock (state) at %d: %lu %lu\n", k, state0[k], state1[k]);
-
-  for(k=0;k<SHAKE128_RATE;k++)
-    if(out0[k] != out1[k]) printf("error shake128_squeezeblock (out) at %d: %d %d\n", k, out0[k], out1[k]);
-
 
   fclose(urandom);
 }

@@ -58,7 +58,7 @@ int main(void) {
   unsigned char in[1184];
   unsigned char out0[150];
   unsigned char out1[150];
-  
+  uint64_t state0[25];
   
 
   FILE *urandom = fopen("/dev/urandom", "r");
