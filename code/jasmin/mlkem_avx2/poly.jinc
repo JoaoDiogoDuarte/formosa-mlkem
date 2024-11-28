@@ -442,7 +442,7 @@ fn _poly_frombytes(reg ptr u16[MLKEM_N] rp, reg u64 ap) -> reg ptr u16[MLKEM_N]
   return rp;
 }
 
-fn _i_poly_frombytes(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_POLYBYTES] ap) -> reg ptr u16[MLKEM_N], reg ptr u8[MLKEM_POLYBYTES] {
+fn _i_poly_frombytes(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_POLYBYTES] ap) -> reg ptr u16[MLKEM_N] {
   inline int i;
   reg u256 t0 t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 tt mask;
   reg ptr u16[16] maskp;
@@ -513,7 +513,7 @@ fn _i_poly_frombytes(reg ptr u16[MLKEM_N] rp, reg ptr u8[MLKEM_POLYBYTES] ap) ->
     rp[u256 8*i + 7] = tt;
   }
 
-  return rp, ap; 
+  return rp; 
  }
 
 param int DMONT   = 1353;      /* (1ULL << 32) % MLKEM_Q */

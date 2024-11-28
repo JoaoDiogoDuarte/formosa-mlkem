@@ -211,14 +211,13 @@ fn __i_polyvec_frombytes(reg ptr u8[MLKEM_POLYVECBYTES] ap) -> stack u16[MLKEM_V
 {
   stack u16[MLKEM_VECN] r;
   stack u8[MLKEM_POLYVECBYTES] a;
-  a = ap;
+  a = #copy(ap);
 
-  () = #spill(ap);
-  r[0:MLKEM_N], a[0:MLKEM_POLYBYTES] = _i_poly_frombytes(r[0:MLKEM_N], a[0:MLKEM_POLYBYTES]);
+  r[0:MLKEM_N] = _i_poly_frombytes(r[0:MLKEM_N], a[0:MLKEM_POLYBYTES]);
 
-  r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES] = _i_poly_frombytes(r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
+  r[MLKEM_N:MLKEM_N] = _i_poly_frombytes(r[MLKEM_N:MLKEM_N], a[MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
 
-  r[2*MLKEM_N:MLKEM_N], a[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES] = _i_poly_frombytes(r[2*MLKEM_N:MLKEM_N], a[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
+  r[2*MLKEM_N:MLKEM_N] = _i_poly_frombytes(r[2*MLKEM_N:MLKEM_N], a[2*MLKEM_POLYBYTES:MLKEM_POLYBYTES]);
 
   return r;
 }

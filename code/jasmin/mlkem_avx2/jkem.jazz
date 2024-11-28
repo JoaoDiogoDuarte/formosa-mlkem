@@ -20,8 +20,6 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_keypair_derand(
   () = #spill(public_key);
   () = #spill(secret_key);
   
-  pk = #copy(public_key);
-  sk = #copy(secret_key);
   rd = #copy(coins);
   
   pkp = pk;
@@ -39,6 +37,9 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_keypair_derand(
     
   public_key = #copy(pk);
   secret_key = #copy(sk);
+
+  () = #spill(public_key);
+  () = #spill(secret_key);
 
   ?{}, r = #set0();
   return public_key, secret_key, r;
@@ -66,8 +67,6 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(
 
   () = #spill(ciphertext);
   () = #spill(shared_secret);
-  ct =  #copy(ciphertext);
-  shk = #copy(shared_secret);
   pk =  #copy(public_key);
   rd =  #copy(coins);
 
@@ -75,25 +74,28 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(
   pkp = pk;
   shkp = shk;
   rdp = rd;
+  
   ctp, shkp =__crypto_kem_enc_jazz(ctp, shkp, pkp, rdp);
+  
   () = #unspill(ciphertext);
   () = #unspill(shared_secret);
-ct = ctp;
-shk = shkp;
+
+  ct = ctp;
+  shk = shkp;
   pk = pkp;
   rd = rdp;
  
   ciphertext = #copy(ct);
- shared_secret = #copy(shk);
+  shared_secret = #copy(shk);
+
   ?{}, r = #set0();
   return ciphertext, shared_secret, r;
 }
 
-
 export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(
     #spill_to_mmx reg ptr u8[MLKEM_SYMBYTES] shared_secret, 
-    #spill_to_mmx reg ptr u8[MLKEM_CIPHERTEXTBYTES] ciphertext, 
-    #spill_to_mmx reg ptr u8[MLKEM_SECRETKEYBYTES] secret_key) 
+    reg ptr u8[MLKEM_CIPHERTEXTBYTES] ciphertext, 
+    reg ptr u8[MLKEM_SECRETKEYBYTES] secret_key) 
     -> reg ptr u8[MLKEM_SYMBYTES], reg u64
 {
   reg u64 r;
@@ -108,7 +110,6 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(
 
   () = #spill(shared_secret);
 
-  shk = #copy(shared_secret);
   ct =  #copy(ciphertext);
   sk =  #copy(secret_key);
 
@@ -116,7 +117,7 @@ export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(
   shkp = shk;
   skp = sk;
   
- shkp = __crypto_kem_dec_jazz(shkp, ctp, skp);
+  shkp = __crypto_kem_dec_jazz(shkp, ctp, skp);
 
   () = #unspill(shared_secret);
   
