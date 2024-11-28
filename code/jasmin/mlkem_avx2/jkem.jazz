@@ -1,92 +1,132 @@
 require "kem.jinc"
 
-// Reg interface -> stack internal
 // Only here for testing purposes
-export fn jade_kem_mlkem_mlkem768_amd64_avx2_keypair_derand(reg u64 public_key secret_key coins) -> reg u64
+export fn jade_kem_mlkem_mlkem768_amd64_avx2_keypair_derand(
+    #spill_to_mmx reg ptr u8[MLKEM_PUBLICKEYBYTES] public_key,
+    #spill_to_mmx reg ptr u8[MLKEM_SECRETKEYBYTES] secret_key,
+    #spill_to_mmx reg ptr u8[2*MLKEM_SYMBYTES] coins) 
+ -> reg ptr u8[MLKEM_PUBLICKEYBYTES], reg ptr u8[MLKEM_SECRETKEYBYTES], reg u64
 {
-  reg u64 r t;
-  stack u8[MLKEM_SYMBYTES*2] randomness;
-  stack u8[MLKEM_PUBLICKEYBYTES] pk;
-  stack u8[MLKEM_SECRETKEYBYTES] sk;
-  inline int i;
-
-  _ = #init_msf();
-
-  public_key = public_key;
-  secret_key = secret_key;
-
-  for i = 0 to MLKEM_SYMBYTES*2
-  {
-     randomness[i] = (u8)[coins + i];
-  }
-
-  () = #spill(public_key, secret_key, coins); // Extra spill as this is only for testing
-
-  pk, sk = __crypto_kem_keypair_jazz(pk, sk, randomness);
- () = #spill(public_key, secret_key, coins);
-  for i=0 to MLKEM_PUBLICKEYBYTES/8 { t = pk[u64 i]; [public_key + 8*i] = t; }
-  for i=0 to MLKEM_SECRETKEYBYTES/8 { t = sk[u64 i]; [secret_key + 8*i] = t; }
-  ?{}, r = #set0();
-  return r;
-}
-
-export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(reg u64 ciphertext shared_secret public_key coins) -> reg u64
-{
-  reg u64 r t;
-  stack u8[MLKEM_SYMBYTES] randomness;
-  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
-  stack u8[MLKEM_SYMBYTES] shk;
+  reg u64 r;
   stack u8[MLKEM_PUBLICKEYBYTES] pk;
   reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
-  inline int i;
+  stack u8[MLKEM_SECRETKEYBYTES] sk;
+  reg ptr u8[MLKEM_SECRETKEYBYTES] skp;
+
+  stack u8[2*MLKEM_SYMBYTES] rd;
+  reg ptr u8[2*MLKEM_SYMBYTES] rdp;     
+  _ = #init_msf();
+
+  () = #spill(public_key);
+  () = #spill(secret_key);
+  
+  pk = #copy(public_key);
+  sk = #copy(secret_key);
+  rd = #copy(coins);
+  
+  pkp = pk;
+  skp = sk;
+  rdp = rd;
+  
+  pkp, skp = __crypto_kem_keypair_jazz(pkp, skp, rdp);  
+  
+  () = #unspill(public_key);
+  () = #unspill(secret_key);
+  
+  pk = pkp;
+  sk = skp;
+  rd = rdp;
+    
+  public_key = #copy(pk);
+  secret_key = #copy(sk);
+
+  ?{}, r = #set0();
+  return public_key, secret_key, r;
+}
+
+export fn jade_kem_mlkem_mlkem768_amd64_avx2_enc_derand(
+    #spill_to_mmx reg ptr u8[MLKEM_CIPHERTEXTBYTES] ciphertext,
+    #spill_to_mmx reg ptr u8[MLKEM_SYMBYTES] shared_secret,
+    #spill_to_mmx reg ptr u8[MLKEM_PUBLICKEYBYTES] public_key,
+    #spill_to_mmx reg ptr u8[MLKEM_SYMBYTES] coins) 
+    -> reg ptr u8[MLKEM_CIPHERTEXTBYTES], reg ptr u8[MLKEM_SYMBYTES], reg u64
+{
+  reg u64 r;
+  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
+  reg ptr u8[MLKEM_CIPHERTEXTBYTES] ctp;  
+  stack u8[MLKEM_SYMBYTES] shk;
+  reg ptr u8[MLKEM_SYMBYTES] shkp;
+  stack u8[MLKEM_PUBLICKEYBYTES] pk;
+  reg ptr u8[MLKEM_PUBLICKEYBYTES] pkp;
+  
+  stack u8[MLKEM_SYMBYTES] rd;
+  reg ptr u8[MLKEM_SYMBYTES] rdp;
 
   _ = #init_msf();
 
-  ciphertext = ciphertext;
-  shared_secret = shared_secret;
-  pkp = pk;
+  () = #spill(ciphertext);
+  () = #spill(shared_secret);
+  ct =  #copy(ciphertext);
+  shk = #copy(shared_secret);
+  pk =  #copy(public_key);
+  rd =  #copy(coins);
 
-  for i = 0 to MLKEM_SYMBYTES 
-  {
-     randomness[i] = (u8)[coins + i];
-  }
-  for i = 0 to MLKEM_PUBLICKEYBYTES/8 { pk[u64 i]   = [public_key + 8*i]; }
-  () = #spill(ciphertext, shared_secret, public_key, coins, pkp); // Extra spill as this is only for testing
-  
-  ct, shk = __crypto_kem_enc_jazz(ct, shk, pkp, randomness);
-  
-  () = #unspill(ciphertext, shared_secret);
-  for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
-  for i=0 to MLKEM_CIPHERTEXTBYTES/8 { t = ct[u64 i]; [ciphertext + 8*i] = t; }
+  ctp = ct;
+  pkp = pk;
+  shkp = shk;
+  rdp = rd;
+  ctp, shkp =__crypto_kem_enc_jazz(ctp, shkp, pkp, rdp);
+  () = #unspill(ciphertext);
+  () = #unspill(shared_secret);
+ct = ctp;
+shk = shkp;
+  pk = pkp;
+  rd = rdp;
+ 
+  ciphertext = #copy(ct);
+ shared_secret = #copy(shk);
   ?{}, r = #set0();
-  return r;
+  return ciphertext, shared_secret, r;
 }
 
 
-export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(reg u64 shared_secret ciphertext secret_key) -> reg u64
+export fn jade_kem_mlkem_mlkem768_amd64_avx2_dec(
+    #spill_to_mmx reg ptr u8[MLKEM_SYMBYTES] shared_secret, 
+    #spill_to_mmx reg ptr u8[MLKEM_CIPHERTEXTBYTES] ciphertext, 
+    #spill_to_mmx reg ptr u8[MLKEM_SECRETKEYBYTES] secret_key) 
+    -> reg ptr u8[MLKEM_SYMBYTES], reg u64
 {
-  reg u64 r t;
-  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
+  reg u64 r;
   stack u8[MLKEM_SYMBYTES] shk;
+  reg ptr u8[MLKEM_SYMBYTES] shkp;   
   stack u8[MLKEM_SECRETKEYBYTES] sk;
   reg ptr u8[MLKEM_SECRETKEYBYTES] skp;
+  stack u8[MLKEM_CIPHERTEXTBYTES] ct;
   reg ptr u8[MLKEM_CIPHERTEXTBYTES] ctp;
-  inline int i;
 
   _ = #init_msf();
 
-  for i = 0 to MLKEM_SECRETKEYBYTES/8 { sk[u64 i] = [secret_key + 8*i]; }
-  for i = 0 to MLKEM_CIPHERTEXTBYTES/8 { ct[u64 i] = [ciphertext + 8*i]; }
+  () = #spill(shared_secret);
 
-  shared_secret = shared_secret;
+  shk = #copy(shared_secret);
+  ct =  #copy(ciphertext);
+  sk =  #copy(secret_key);
+
   ctp = ct;
+  shkp = shk;
   skp = sk;
-  () = #spill(ctp, skp, shared_secret, ciphertext, secret_key);
-
-shk = __crypto_kem_dec_jazz(shk, ctp, skp);
+  
+ shkp = __crypto_kem_dec_jazz(shkp, ctp, skp);
 
   () = #unspill(shared_secret);
-  for i=0 to MLKEM_SYMBYTES/8 { t = shk[u64 i]; [shared_secret + 8*i] = t; }
+  
+  shk = shkp;
+  sk = skp;  
+  ct = ctp;
+
+  shared_secret = #copy(shk);
+
+
   ?{}, r = #set0();
-  return r;
+  return shared_secret, r;
 }
