@@ -76,7 +76,7 @@ test/test_indcpa: test/test_indcpa.c $(HEADERS) $(SOURCES) $(INCS) jindcpa.o
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) jindcpa.o $<
 
 test/test_kem: test/test_kem.c $(HEADERS) $(SOURCES) $(INCS) jkem.o
-	$(CC) $(CFLAGS) -o $@ $(SOURCES) jkem.o  $<
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) jkem.o $(current_dir)../jasmin/compiler/syscall/jasmin_syscall.o $<
 
 test/speed_indcpa: test/speed_indcpa.c $(HEADERS) $(SOURCES) $(INCS) jindcpa.o
 	$(CC) $(CFLAGS) -o $@ $(SOURCES) jindcpa.o $<
