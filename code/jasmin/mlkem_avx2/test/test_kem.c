@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 
 #include "../params.h"
 #include "../ntt.h"
@@ -15,6 +15,8 @@ int main(void)
   unsigned char ct1[MLKEM_CIPHERTEXTBYTES];
   unsigned char shk0[MLKEM_SSBYTES];
   unsigned char shk1[MLKEM_SSBYTES];
+  unsigned char shk2[MLKEM_SSBYTES];
+  unsigned char shk3[MLKEM_SSBYTES];
 
   unsigned char randomness0[2*MLKEM_SYMBYTES];
   unsigned char randomness1[2*MLKEM_SYMBYTES];
@@ -45,14 +47,15 @@ int main(void)
     if(shk0[i] != shk1[i]) printf("error crypto_kem_enc ss: %d\n", i);
   
   /* TEST DECAPSULATION */
-  memset(shk0, 0, MLKEM_SSBYTES);
-  memset(shk1, 0, MLKEM_SSBYTES);
 
-  crypto_kem_dec(shk0, ct0, sk0);
-  jade_kem_mlkem_mlkem768_amd64_avx2_dec(shk1, ct1, sk1);
+  crypto_kem_dec(shk2, ct0, sk0);
+  jade_kem_mlkem_mlkem768_amd64_avx2_dec(shk3, ct1, sk1);
 
   for(int i=0;i<MLKEM_SSBYTES;i++)
     if(shk0[i] != shk1[i]) printf("error crypto_kem_dec (suc): %d %d %d\n", i, shk0[i], shk1[i]);
+
+  for(int i=0;i<MLKEM_SSBYTES;i++)
+    if(shk1[i] != shk3[i]) printf("error crypto_kem_dec eq (suc): %d %d %d\n", i, shk1[i], shk3[i]);
 
   /* TEST DECAPSULATION FAILURE */
   memset(shk0, 0, MLKEM_SSBYTES);
